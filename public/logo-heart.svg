@@ -1,0 +1,7 @@
+<svg viewBox="0 0 200 240" xmlns="http://www.w3.org/2000/svg">
+  <!-- Heart background -->
+  <path d="M100 220 C30 170, 20 120, 20 90 C20 50, 50 20, 75 20 C85 20, 95 25, 100 35 C105 25, 115 20, 125 20 C150 20, 180 50, 180 90 C180 120, 170 170, 100 220 Z" fill="#8B1538" stroke="#D4AF37" stroke-width="4"/>
+  
+  <!-- "Truly" text in script style -->
+  <text x="100" y="130" font-family="cursive" font-size="72" font-weight="bold" fill="#D4AF37" text-anchor="middle" dominant-baseline="central" letter-spacing="2">Truly</text>
+</svg>

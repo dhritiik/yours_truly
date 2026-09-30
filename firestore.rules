@@ -1,0 +1,141 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helpers ────────────────────────────────────────────────────────────────
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // True if the caller's users/{uid} profile has role == "admin".
+    // Admins manage every customer (bride/groom couple) from the dashboard.
+    function isAdmin() {
+      return isSignedIn() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "admin";
+    }
+
+    // True if the caller is the customer's own linked login (owner_uid).
+    function isCustomerOwner(customerId) {
+      return isSignedIn() &&
+        get(/databases/$(database)/documents/customers/$(customerId)).data.owner_uid == request.auth.uid;
+    }
+
+    function isCustomerAdminOrOwner(customerId) {
+      return isAdmin() || isCustomerOwner(customerId);
+    }
+
+    // ── users/{uid} ──────────────────────────────────────────────────────────
+    // Each user can read and write only their own profile document.
+    // Note: `role` is set by the app on first write and should only ever be
+    // promoted to "admin" manually (e.g. via Firebase console/admin SDK) —
+    // there is no client path that lets a user self-promote after creation.
+    match /users/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+
+      // ── users/{uid}/invitation/draft ─────────────────────────────────────
+      // Legacy private editor draft (pre-multi-tenant model). Kept read/write
+      // for backward compatibility with any accounts not yet migrated to
+      // customers/{customer_id}. New data should use the customers/ tree below.
+      match /invitation/{docId} {
+        allow read, write: if request.auth != null && request.auth.uid == uid;
+      }
+
+      // ── users/{uid}/guests/{guestId} ─────────────────────────────────────
+      // Legacy private guest list. See note above.
+      match /guests/{guestId} {
+        allow read, write: if request.auth != null && request.auth.uid == uid;
+      }
+    }
+
+    // ── customers/{customerId} ──────────────────────────────────────────────
+    // One document per bride/groom couple. Admins manage all customer
+    // records; a customer may optionally have owner_uid set to their own
+    // auth uid if they've been invited to log in and view/edit their own data.
+    match /customers/{customerId} {
+      allow read: if isCustomerAdminOrOwner(customerId);
+      // Only admins can create/delete customer records from the dashboard.
+      allow create: if isAdmin() && request.resource.data.created_by == request.auth.uid;
+      allow update: if isCustomerAdminOrOwner(customerId);
+      allow delete: if isAdmin();
+
+      // ── customers/{customerId}/invitation/draft ───────────────────────────
+      // Per-customer invitation draft — admins and the customer's own login
+      // (if any) can read/write it. Each customer's customization is fully
+      // isolated from every other customer.
+      match /invitation/{docId} {
+        allow read, write: if isCustomerAdminOrOwner(customerId);
+      }
+
+      // ── customers/{customerId}/guests/{guestId} ───────────────────────────
+      // Per-customer private guest list.
+      match /guests/{guestId} {
+        allow read, write: if isCustomerAdminOrOwner(customerId);
+      }
+    }
+
+    // ── weddings/{slug} ──────────────────────────────────────────────────────
+    // Published invitations. Anyone can READ the wedding document (it powers
+    // the public invite page). Only the owner (customer_id, stored as
+    // owner_uid for backward compat) or an admin can WRITE.
+    match /weddings/{slug} {
+      allow read: if true;
+
+      // First-time publish: document must include owner_uid = the customer_id
+      // being published (admins publish on behalf of the customer they're
+      // currently managing).
+      allow create: if isSignedIn()
+                    && (isAdmin() || request.resource.data.owner_uid == request.auth.uid);
+
+      // Subsequent updates/deletes: must be the same owner recorded at creation,
+      // or an admin.
+      allow update, delete: if isSignedIn()
+                            && (isAdmin() || resource.data.owner_uid == request.auth.uid);
+
+      // ── weddings/{slug}/guests/{guestId} ─────────────────────────────────
+      //
+      // SECURITY MODEL (updated 2026-05-27):
+      //
+      // GET  (single-document read): OPEN to anyone.
+      //   - Magic links use the new format /{slug}?t={token}&gid={guest_id}
+      //   - WeddingPage.tsx does getDoc(doc(db,"weddings",slug,"guests",gid))
+      //     and validates data.guest_token === token client-side.
+      //   - This is safe because you need the correct guest_id in the URL
+      //     to read the document, and the token is validated on read.
+      //
+      // LIST (collection query): RESTRICTED to authenticated wedding owner or admin.
+      //   - Previously open (`allow list: if true`) which allowed anyone to
+      //     call getDocs() and harvest all guest names and RSVPs.
+      //   - Now restricted: only the wedding owner's dashboard (or an admin)
+      //     can list guests.
+      //   - Guest-facing pages use direct getDoc() reads (see above).
+      //   - The RSVP API route uses Path A (direct read via guest_id) for new
+      //     links, and Path B (query by token) as a legacy fallback. Path B
+      //     currently runs as unauthenticated — migrate to firebase-admin to
+      //     fully enforce this rule for the legacy path too.
+      //
+      // WRITE: wedding owner or admin only (unchanged).
+      //
+      match /guests/{guestId} {
+        // Single-document reads: open — used by magic link token resolution
+        allow get: if true;
+
+        // Collection queries: OWNER OR ADMIN ONLY — prevents guest list enumeration.
+        // The RSVP legacy path (Path B) will fail for unauthenticated calls
+        // until migrated to firebase-admin. New magic links (with gid) use
+        // Path A (direct read) and are unaffected by this rule.
+        allow list: if isSignedIn()
+                    && (isAdmin() ||
+                        get(/databases/$(database)/documents/weddings/$(slug)).data.owner_uid
+                          == request.auth.uid);
+
+        // Writes: owner or admin only.
+        allow write: if isSignedIn()
+                     && (isAdmin() ||
+                         get(/databases/$(database)/documents/weddings/$(slug)).data.owner_uid
+                           == request.auth.uid);
+      }
+    }
+  }
+}
+

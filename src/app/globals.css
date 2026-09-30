@@ -1,26 +1,334 @@
+/* ── Fonts ── */
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Pinyon+Script&family=Italianno&family=Imperial+Script&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Montserrat:wght@400;500;600;700&display=swap');
+
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* ── Tailwind v4 Theme tokens ── */
+@theme {
+  /* Wedding template palette */
+  --color-sage:       hsl(95 25% 55%);
+  --color-sage-light: hsl(95 20% 75%);
+  --color-sage-dark:  hsl(95 30% 40%);
+  --color-cream:      hsl(45 40% 94%);
+  --color-cream-light:hsl(45 50% 97%);
+  --color-gold:       hsl(43 75% 50%);
+  --color-gold-light: hsl(43 65% 65%);
+  --color-gold-dark:  hsl(43 80% 35%);
+  --color-paper:      hsl(40 35% 92%);
+  --color-wax:        hsl(35 45% 85%);
+  --color-rose:       hsl(347 80% 60%);
+  --color-rose-light: hsl(347 75% 85%);
+  --color-warm-dark:  hsl(25 35% 18%);
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  /* Fonts */
+  --font-display:   "Cinzel", serif;
+  --font-elegant:   "Pinyon Script", cursive;
+  --font-body:      "Cormorant Garamond", serif;
+  --font-italianno: "Italianno", cursive;
+  --font-imperial:  "Imperial Script", cursive;
+  --font-sans:      "Montserrat", sans-serif;
+  --font-playfair:  "Playfair Display", serif;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  /* Animations */
+  --animate-fade-in:        fade-in 0.6s ease-out forwards;
+  --animate-float:          float 3s ease-in-out infinite;
+  --animate-float-slow:     float-slow 6s ease-in-out infinite;
+  --animate-shimmer:        shimmer-slide 3s infinite;
+  --animate-sparkle:        sparkle 2s ease-in-out infinite;
+  --animate-pulse-gold:     pulse-gold 2.5s ease-in-out infinite;
+  --animate-spin-slow:      spin-slow 15s linear infinite;
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up:   accordion-up 0.2s ease-out;
+
+  @keyframes fade-in {
+    0%   { opacity: 0; transform: translateY(20px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50%       { transform: translateY(-10px); }
+  }
+  @keyframes float-slow {
+    0%, 100% { transform: translateY(0px) rotate(0deg); }
+    33%       { transform: translateY(-12px) rotate(3deg); }
+    66%       { transform: translateY(-5px) rotate(-2deg); }
+  }
+  @keyframes shimmer-slide {
+    0%   { left: -100%; }
+    100% { left: 200%; }
+  }
+  @keyframes sparkle {
+    0%, 100% { opacity: 0; transform: scale(0); }
+    50%       { opacity: 1; transform: scale(1); }
+  }
+  @keyframes pulse-gold {
+    0%, 100% { box-shadow: 0 0 20px -5px hsl(43 75% 50% / 0.3); }
+    50%       { box-shadow: 0 0 40px -5px hsl(43 75% 50% / 0.6); }
+  }
+  @keyframes spin-slow {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+  }
+  @keyframes accordion-down {
+    from { height: 0; }
+    to   { height: var(--radix-accordion-content-height); }
+  }
+  @keyframes accordion-up {
+    from { height: var(--radix-accordion-content-height); }
+    to   { height: 0; }
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* ── CSS Custom Properties for shadcn/ui + landing page ── */
+@layer base {
+  :root {
+    /* Landing page design system */
+    --background:            30 30% 96%;
+    --foreground:            25 30% 12%;
+    --card:                  30 25% 94%;
+    --card-foreground:       25 30% 12%;
+    --popover:               30 30% 96%;
+    --popover-foreground:    25 30% 12%;
+    --primary:               0 85% 50%;
+    --primary-foreground:    30 30% 98%;
+    --secondary:             340 30% 88%;
+    --secondary-foreground:  340 40% 30%;
+    --muted:                 30 15% 90%;
+    --muted-foreground:      25 10% 45%;
+    --accent:                340 35% 65%;
+    --accent-foreground:     30 30% 98%;
+    --destructive:           0 84.2% 60.2%;
+    --destructive-foreground:210 40% 98%;
+    --border:                30 20% 85%;
+    --input:                 30 20% 85%;
+    --ring:                  0 85% 50%;
+    --radius:                0.75rem;
+
+    /* Brand tokens (used by landing page via hsl(var(--gold)) etc.) */
+    --gold:       43 75% 50%;
+    --gold-light: 43 65% 65%;
+    --rose:       347 80% 60%;
+    --rose-light: 347 75% 85%;
+    --cream:      35 40% 95%;
+    --warm-dark:  25 35% 18%;
+
+    /* Sidebar tokens (shadcn) */
+    --sidebar-background:          0 0% 98%;
+    --sidebar-foreground:          240 5.3% 26.1%;
+    --sidebar-primary:             240 5.9% 10%;
+    --sidebar-primary-foreground:  0 0% 98%;
+    --sidebar-accent:              240 4.8% 95.9%;
+    --sidebar-accent-foreground:   240 5.9% 10%;
+    --sidebar-border:              220 13% 91%;
+    --sidebar-ring:                217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background:            25 35% 8%;
+    --foreground:            30 20% 90%;
+    --card:                  25 30% 12%;
+    --card-foreground:       30 20% 90%;
+    --popover:               25 35% 8%;
+    --popover-foreground:    30 20% 90%;
+    --primary:               0 85% 50%;
+    --primary-foreground:    30 30% 98%;
+    --secondary:             340 20% 20%;
+    --secondary-foreground:  340 30% 85%;
+    --muted:                 25 15% 18%;
+    --muted-foreground:      30 10% 60%;
+    --accent:                340 35% 45%;
+    --accent-foreground:     30 30% 98%;
+    --destructive:           0 62.8% 30.6%;
+    --destructive-foreground:210 40% 98%;
+    --border:                25 15% 22%;
+    --input:                 25 15% 22%;
+    --ring:                  0 85% 50%;
+    --sidebar-background:    240 5.9% 10%;
+    --sidebar-foreground:    240 4.8% 95.9%;
+    --sidebar-primary:       224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent:        240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border:        240 3.7% 15.9%;
+    --sidebar-ring:          217.2 91.2% 59.8%;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    border-color: hsl(var(--border));
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: "Cormorant Garamond", serif;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 { font-family: "Cinzel", serif; }
+
+  ::selection {
+    background: hsl(var(--gold) / 0.25);
+    color: hsl(var(--foreground));
+  }
+
+  ::-webkit-scrollbar        { width: 6px; }
+  ::-webkit-scrollbar-track  { background: hsl(var(--background)); }
+  ::-webkit-scrollbar-thumb  { background: hsl(var(--gold) / 0.4); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: hsl(var(--gold) / 0.7); }
 }
+
+/* ── Landing page component classes ── */
+@layer components {
+  .gold-gradient {
+    background: linear-gradient(135deg, hsl(var(--gold)) 0%, hsl(var(--primary)) 50%, hsl(var(--gold-light)) 100%);
+  }
+
+  .gold-text {
+    background: linear-gradient(135deg, hsl(var(--gold)) 0%, hsl(var(--primary)) 50%, hsl(var(--gold-light)) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .rose-glow  { box-shadow: 0 0 40px -10px hsl(var(--rose) / 0.4); }
+  .gold-glow  { box-shadow: 0 0 40px -10px hsl(var(--gold) / 0.5); }
+
+  .glass-card {
+    background: hsl(var(--card) / 0.6);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid hsl(var(--border) / 0.5);
+    transform: translateZ(0);
+  }
+
+  .hover-lift { transition: transform 0.3s ease, box-shadow 0.3s ease; }
+  .hover-lift:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 20px 40px -10px hsl(var(--gold) / 0.3);
+  }
+
+  .shimmer { position: relative; overflow: hidden; }
+  .shimmer::after {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%;
+    width: 60%; height: 100%;
+    background: linear-gradient(90deg, transparent, hsl(var(--gold) / 0.08), transparent);
+    animation: shimmer-slide 3s infinite;
+  }
+
+  .section-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, hsl(var(--gold) / 0.3), transparent);
+  }
+}
+
+/* ── Utility classes (both template + landing) ── */
+@layer utilities {
+  /* Font helpers – wedding templates */
+  .font-display   { font-family: "Cinzel", serif; }
+  .font-body      { font-family: "Cormorant Garamond", serif; }
+  .font-elegant   { font-family: "Pinyon Script", cursive; }
+  .font-italianno { font-family: "Italianno", cursive; }
+  .font-imperial  { font-family: "Imperial Script", cursive; }
+
+  /* Font helpers – landing page */
+  .font-sans    { font-family: "Montserrat", sans-serif; }
+  .font-playfair{ font-family: "Playfair Display", serif; }
+
+  /* Colour helpers – wedding templates */
+  .text-sage      { color: hsl(95 25% 55%); }
+  .text-sage-dark { color: hsl(95 30% 40%); }
+
+  /* Colour helpers – shared */
+  .text-gold  { color: hsl(var(--gold)); }
+  .text-rose  { color: hsl(var(--rose)); }
+  .bg-gold    { background-color: hsl(var(--gold)); }
+  .bg-rose    { background-color: hsl(var(--rose)); }
+  .border-gold{ border-color: hsl(var(--gold)); }
+
+  /* Wedding template backgrounds */
+  .bg-cream       { background-color: hsl(45 40% 94%); }
+  .bg-cream-light { background-color: hsl(45 50% 97%); }
+  .bg-sage        { background-color: hsl(95 25% 55%); }
+
+  /* Paper texture for wedding details section */
+  .paper-texture {
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+    background-blend-mode: soft-light;
+    background-size: 200px;
+  }
+
+  /* Shadows */
+  .invitation-shadow { box-shadow: 0 20px 40px -15px rgba(0,0,0,0.15), 0 8px 16px -8px rgba(0,0,0,0.1); }
+
+  /* Animation shorthands */
+  .animate-float       { animation: float 3s ease-in-out infinite; }
+  .animate-float-slow  { animation: float-slow 6s ease-in-out infinite; }
+  .animate-pulse-gold  { animation: pulse-gold 2.5s ease-in-out infinite; }
+  .animate-spin-slow   { animation: spin-slow 15s linear infinite; }
+  .animate-shimmer     { animation: shimmer-slide 3s infinite; }
+
+  /* GPU compositing hints */
+  .animate-float,
+  .animate-float-slow,
+  .animate-pulse-gold,
+  .animate-spin-slow { will-change: transform; }
+}
+
+/* ── Performance: content-visibility for below-fold sections ── */
+section:not(:first-of-type) {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 600px;
+}
+
+/* ── Dashboard specific ── */
+@layer components {
+  .dashboard-card {
+    background: white;
+    border: 1px solid #E8E0D8;
+    border-radius: 1rem;
+    overflow: hidden;
+  }
+
+  .dashboard-input {
+    width: 100%;
+    height: 2.5rem;
+    border-radius: 0.5rem;
+    border: 1px solid #E8E0D8;
+    background: #FDFBF7;
+    padding: 0 0.75rem;
+    font-family: "Montserrat", sans-serif;
+    font-size: 0.875rem;
+    color: hsl(25 30% 12%);
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+
+  .dashboard-input:focus {
+    border-color: hsl(43 75% 50%);
+    box-shadow: 0 0 0 3px hsl(43 75% 50% / 0.15);
+  }
+
+  .nav-item-active {
+    background: hsl(43 75% 50% / 0.1);
+    color: hsl(43 75% 40%);
+    border-left: 2px solid hsl(43 75% 50%);
+  }
+
+  /* Fix for phone preview viewport heights */
+  .phone-preview-wrapper .min-h-screen {
+    min-height: 100% !important;
+  }
+  .phone-preview-wrapper .h-screen {
+    height: 100% !important;
+  }
+}
+
