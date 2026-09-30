@@ -7,7 +7,8 @@ const nextConfig: NextConfig = {
   // https://www.yourstrulyinvites.com/i/* while the marketing site (a
   // separate Vercel project) continues to own the root path. All Next.js
   // routes, assets, and server actions are automatically prefixed.
-  basePath: "/i",
+  // Disabled in dev so `localhost:3000/` works directly without the /i prefix.
+  basePath: process.env.NODE_ENV === "production" ? "/i" : "",
 
   images: {
     remotePatterns: [

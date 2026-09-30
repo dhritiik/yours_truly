@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { Check } from "lucide-react";
 import { WeddingData } from "@/lib/types";
+import { withBasePath } from "@/lib/basePath";
 
 const TEMPLATES: {
   id: WeddingData["template_id"];
@@ -16,28 +17,28 @@ const TEMPLATES: {
     name: "Saloni & Jay",
     description: "Elegant Indian Wedding — marigolds, rich reds & gold",
     accent: "#c9a96e",
-    preview: "/hero-background.jpg",
+    preview: withBasePath("/hero-background.jpg"),
   },
   {
     id: "WeddingElegant_v2",
     name: "Elegant",
     description: "Modern minimalist — clean lines, soft florals",
     accent: "#d4a0a7",
-    preview: "/hero-wedding2.jpg",
+    preview: withBasePath("/hero-wedding2.jpg"),
   },
   {
     id: "Anniversary_v3",
     name: "Anniversary",
     description: "Milestone celebrations — deep blues and champagne",
     accent: "#a0b4d4",
-    preview: "/hero-anni.jpg",
+    preview: withBasePath("/hero-anni.jpg"),
   },
   {
     id: "RoyalInvites_v1",
     name: "Royal Invites",
     description: "Regal courtyard arch — rope-pull reveal & unrolling scrolls",
     accent: "#c79b4a",
-    preview: "/wedding-new-inv-fr-card-m-v01.webp",
+    preview: withBasePath("/wedding-new-inv-fr-card-m-v01.webp"),
   },
 ];
 

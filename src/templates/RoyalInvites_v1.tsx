@@ -13,6 +13,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "framer-motion";
 import type { WeddingData, Guest } from "@/lib/types";
 import { AmbientBackground, ThemeType } from "@/components/TemplateAmbientBackground";
+import { withBasePath } from "@/lib/basePath";
 
 export type { ThemeType };
 
@@ -25,18 +26,18 @@ interface TemplateProps {
 // ---------------------------------------------------------
 // Decorative asset paths (design-only, not user content)
 // ---------------------------------------------------------
-const DARK_BG = "/wedding-new-courtyard-dark-m-v03.webp";
-const LIT_BG = "/wedding-new-courtyard-lit-m-v03.webp";
-const ROPE_IMG = "/wedding-newrope-hemp-pull-x-v01.webp";
-const ARCH_BG = "/wedding-new-inv-fr-card-m-v01.webp";
-const PANEL_BG = "/wedding-new-bg-panel-m-v01.webp";
-const GARDEN_BG = "/wedding-new-bg-secret-garden-m-v01.webp";
-const PEACOCK = "/wedding-new-peacock.png";
-const MENU_BG = "/wedding-new-Menu_background.webp";
-const COMPASS_ICON = "/wedding-new-compass.webp";
-const MUSIC_ICON = "/wedding-new-music_icon.webp";
-const FARMAN_ROLLED = "/wedding-new-farman-rolled-x-v01.webp";
-const FARMAN_OPEN = "/wedding-new-farman-open-x-v01.webp";
+const DARK_BG = withBasePath("/wedding-new-courtyard-dark-m-v03.webp");
+const LIT_BG = withBasePath("/wedding-new-courtyard-lit-m-v03.webp");
+const ROPE_IMG = withBasePath("/wedding-newrope-hemp-pull-x-v01.webp");
+const ARCH_BG = withBasePath("/wedding-new-inv-fr-card-m-v01.webp");
+const PANEL_BG = withBasePath("/wedding-new-bg-panel-m-v01.webp");
+const GARDEN_BG = withBasePath("/wedding-new-bg-secret-garden-m-v01.webp");
+const PEACOCK = withBasePath("/wedding-new-peacock.png");
+const MENU_BG = withBasePath("/wedding-new-Menu_background.webp");
+const COMPASS_ICON = withBasePath("/wedding-new-compass.webp");
+const MUSIC_ICON = withBasePath("/wedding-new-music_icon.webp");
+const FARMAN_ROLLED = withBasePath("/wedding-new-farman-rolled-x-v01.webp");
+const FARMAN_OPEN = withBasePath("/wedding-new-farman-open-x-v01.webp");
 const LOTUS_DIVIDER = "https://pub-1cc0f6e993214be9a36badeeb631f4b6.r2.dev/templates/template09/assets/invite/pn-inv-div-lotus-divider-x-v01.webp";
 
 const PULL_THRESHOLD = 90;
@@ -160,7 +161,7 @@ const FarmanStop = ({ event, seatCountText, onThemeChange }: {
       <motion.div className="farman-open-wrap" initial={{ scaleY: 0, opacity: 0 }} animate={isOpen ? { scaleY: 1, opacity: 1 } : { scaleY: 0, opacity: 0 }}
         transition={{ duration: 1.2, ease: [0.25, 1, 0.5, 1] }} style={{ transformOrigin: "top" }} onAnimationComplete={() => setAnimationComplete(true)}>
         <img className="farman-parchment-img" src={FARMAN_OPEN} alt="" aria-hidden="true" draggable="false" />
-        <img className="farman-peacock" src="/wedding-new-peacock.png" alt="" aria-hidden="true" draggable="false" />
+        <img className="farman-peacock" src={PEACOCK} alt="" aria-hidden="true" draggable="false" />
         <div className="farman-dust-layer" aria-hidden="true">
           <div className="farman-dust-dot dot-1"></div>
           <div className="farman-dust-dot dot-2"></div>

@@ -12,6 +12,7 @@ import { WeddingData, Guest } from "@/lib/types";
 import Envelope from "@/components/Envelope"; // Wait, I will use a shared one but identical
 import { RenderCustomText } from "@/components/RenderCustomText";
 import { AmbientBackground, ThemeType } from "@/components/TemplateAmbientBackground";
+import { withBasePath } from "@/lib/basePath";
 
 export type { ThemeType };
 
@@ -416,12 +417,12 @@ export default function SaloniJayTemplate({ wedding, guest, skipEnvelope = false
     return () => clearTimeout(timer);
   }, [showEnvelope]);
 
-  const logo = wedding.assets.logo_image || "/logo_sj.png";
-  const heroImg = wedding.assets.hero_image || "/hero-background.jpg";
+  const logo = wedding.assets.logo_image || withBasePath("/logo_sj.png");
+  const heroImg = wedding.assets.hero_image || withBasePath("/hero-background.jpg");
 
   return (
     <>
-      <audio ref={audioRef} src={wedding.assets.audio_url || "/wedding-audio.mp3"} loop muted={isMuted} />
+      <audio ref={audioRef} src={wedding.assets.audio_url || withBasePath("/wedding-audio.mp3")} loop muted={isMuted} />
       {showEnvelope && <Envelope onOpen={() => setShowEnvelope(false)} isMuted={isMuted} onMuteChange={setIsMuted} audioRef={audioRef} introVideo={wedding.assets.intro_video} introBg={wedding.assets.intro_bg} />}
       
       <AmbientBackground currentTheme={currentTheme} customParticleUrl={currentParticleUrl ?? wedding.assets.ambient_particle_url} />

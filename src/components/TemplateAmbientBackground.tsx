@@ -23,6 +23,7 @@
 
 import { memo, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { withBasePath } from "@/lib/basePath";
 
 export type ThemeType = "default" | "mayra" | "bhakti" | "wedding" | "reception";
 
@@ -46,7 +47,7 @@ const PetalsEffect = memo(function PetalsEffect({ imageUrl }: EffectProps) {
       {petals.map((p) => (
         <motion.img
           key={p.id}
-          src={imageUrl || "/marigold.png"}
+          src={imageUrl || withBasePath("/marigold.png")}
           alt="falling marigold"
           className="absolute object-contain opacity-90"
           style={{ left: p.left, top: -60, width: p.size, height: p.size }}
@@ -142,7 +143,7 @@ const WeddingEffect = memo(function WeddingEffect({ imageUrl }: EffectProps) {
           {roses.map((r) => (
             <motion.img
               key={`rose-${r.id}`}
-              src="/rose.png"
+              src={withBasePath("/rose.png")}
               alt="falling rose"
               className="absolute object-contain opacity-90"
               style={{ left: r.left, top: -60, width: r.size, height: r.size }}
@@ -169,7 +170,7 @@ const StarryEffect = memo(function StarryEffect({ imageUrl }: EffectProps) {
       {stars.map((s) => (
         <motion.img
           key={s.id}
-          src={imageUrl || "/star.png"}
+          src={imageUrl || withBasePath("/star.png")}
           alt="star"
           className="absolute object-contain"
           style={{ left: s.left, top: s.top, width: s.size, height: s.size, ...(!imageUrl ? { filter: "brightness(0) invert(1)" } : {}) }}

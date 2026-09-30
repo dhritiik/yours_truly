@@ -8,6 +8,7 @@ import { WeddingData, WeddingEvent, CustomTextSection } from "@/lib/types";
 import { upsertUserProfile } from "@/lib/userService";
 import { getAuth } from "firebase/auth";
 import { getDefaultDescriptionForEvent, getDefaultAmbientEffectForEvent, DEFAULT_THEME_TEXTS } from "@/lib/defaults";
+import { withBasePath } from "@/lib/basePath";
 
 const sanitizeSlug = (value: string) =>
   value
@@ -33,9 +34,9 @@ function createDefaultWedding(customerId: string): WeddingData {
       story_text: "",
     },
     assets: {
-      hero_image: "/hero-background.jpg",
-      logo_image: "/logo_sj.png",
-      audio_url: "/wedding-audio.mp3",
+      hero_image: withBasePath("/hero-background.jpg"),
+      logo_image: withBasePath("/logo_sj.png"),
+      audio_url: withBasePath("/wedding-audio.mp3"),
     },
     events: [
       {
@@ -157,18 +158,18 @@ export function useInvitationStore(customerId: string | null) {
     setWedding((prev) => {
       if (!prev) return prev;
       
-      let newHero = "/hero-background.jpg";
-      let newLogo = "/logo_sj.png";
+      let newHero = withBasePath("/hero-background.jpg");
+      let newLogo = withBasePath("/logo_sj.png");
       
       if (templateId === "Anniversary_v3") {
-        newHero = "/hero-anni.jpg";
-        newLogo = "/logo-anni.png";
+        newHero = withBasePath("/hero-anni.jpg");
+        newLogo = withBasePath("/logo-anni.png");
       } else if (templateId === "WeddingElegant_v2") {
-        newHero = "/hero-wedding2.jpg";
-        newLogo = "/logo-wedding2.png";
+        newHero = withBasePath("/hero-wedding2.jpg");
+        newLogo = withBasePath("/logo-wedding2.png");
       } else if (templateId === "RoyalInvites_v1") {
-        newHero = "/wedding-new-inv-fr-card-m-v01.webp";
-        newLogo = "/wedding-new-Menu_background.webp";
+        newHero = withBasePath("/wedding-new-inv-fr-card-m-v01.webp");
+        newLogo = withBasePath("/wedding-new-Menu_background.webp");
       }
 
       const next: WeddingData = { 
