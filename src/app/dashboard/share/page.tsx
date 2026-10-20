@@ -13,7 +13,11 @@ export default function SharePage() {
   const [copied, setCopied] = useState(false);
 
   const slug = wedding?.slug || "saloni-jay-demo";
-  const shareUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/${slug}`;
+  // Guest-facing links must always point at the public domain
+  // (yourstrulyinvites.com), never at window.location.origin — the dashboard
+  // itself is served from admin.yourstrulyinvites.com, and guests should not
+  // see that internal hostname. The invite page lives under the /i basePath.
+  const shareUrl = `https://yourstrulyinvites.com/i/${slug}`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(shareUrl).then(() => {

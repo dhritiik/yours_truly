@@ -349,11 +349,11 @@ export function buildMagicLink(
   guest: Pick<Guest, "guest_token" | "guest_id" | "guest_slug">,
   baseUrl?: string
 ): string {
-  const base =
-    baseUrl ??
-    (typeof window !== "undefined"
-      ? `${window.location.origin}/i`
-      : "https://www.yourstrulyinvites.com/i");
+  // Guest-facing links must always point at the public domain
+  // (yourstrulyinvites.com), never at window.location.origin — the dashboard
+  // itself is served from admin.yourstrulyinvites.com, and guests should not
+  // see that internal hostname.
+  const base = baseUrl ?? "https://yourstrulyinvites.com/i";
 
   if (guest.guest_slug?.trim()) {
     return `${base}/${slug}/${guest.guest_slug}`;
