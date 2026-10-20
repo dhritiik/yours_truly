@@ -14,6 +14,7 @@ import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "
 import type { WeddingData, Guest } from "@/lib/types";
 import { AmbientBackground, ThemeType } from "@/components/TemplateAmbientBackground";
 import { withBasePath } from "@/lib/basePath";
+import { DEFAULT_AUDIO } from "@/lib/defaultAssets";
 
 export type { ThemeType };
 

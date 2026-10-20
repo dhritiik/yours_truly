@@ -13,6 +13,7 @@ import Envelope from "@/components/Envelope"; // Wait, I will use a shared one b
 import { RenderCustomText } from "@/components/RenderCustomText";
 import { AmbientBackground, ThemeType } from "@/components/TemplateAmbientBackground";
 import { withBasePath } from "@/lib/basePath";
+import { DEFAULT_AUDIO } from "@/lib/defaultAssets";
 
 export type { ThemeType };
 
