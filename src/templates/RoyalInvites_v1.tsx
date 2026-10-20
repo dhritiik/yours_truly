@@ -14,7 +14,6 @@ import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "
 import type { WeddingData, Guest } from "@/lib/types";
 import { AmbientBackground, ThemeType } from "@/components/TemplateAmbientBackground";
 import { withBasePath } from "@/lib/basePath";
-import { DEFAULT_AUDIO } from "@/lib/defaultAssets";
 
 export type { ThemeType };
 
@@ -354,7 +353,9 @@ export default function RoyalInvitesTemplate({ wedding, guest, skipEnvelope = fa
 
   return (
     <>
-      <audio ref={audioRef} src={wedding.assets.audio_url || DEFAULT_AUDIO} loop playsInline muted={isMuted} />
+      {wedding.assets.audio_url && (
+        <audio ref={audioRef} src={wedding.assets.audio_url} loop playsInline muted={isMuted} />
+      )}
       <AnimatePresence>
         {showEnvelope && <Envelope key="envelope" onOpen={() => setShowEnvelope(false)} audioRef={audioRef} />}
       </AnimatePresence>

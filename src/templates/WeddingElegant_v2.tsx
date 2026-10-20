@@ -13,7 +13,6 @@ import Envelope from "@/components/Envelope"; // Wait, I will use a shared one b
 import { RenderCustomText } from "@/components/RenderCustomText";
 import { AmbientBackground, ThemeType } from "@/components/TemplateAmbientBackground";
 import { withBasePath } from "@/lib/basePath";
-import { DEFAULT_AUDIO } from "@/lib/defaultAssets";
 
 export type { ThemeType };
 
@@ -423,7 +422,9 @@ export default function WeddingElegantTemplate({ wedding, guest, skipEnvelope = 
 
   return (
     <>
-      <audio ref={audioRef} src={wedding.assets.audio_url || DEFAULT_AUDIO} loop muted={isMuted} />
+      {wedding.assets.audio_url && (
+        <audio ref={audioRef} src={wedding.assets.audio_url} loop muted={isMuted} />
+      )}
       {showEnvelope && <Envelope onOpen={() => setShowEnvelope(false)} isMuted={isMuted} onMuteChange={setIsMuted} audioRef={audioRef} introVideo={wedding.assets.intro_video} introBg={wedding.assets.intro_bg} />}
       
       <AmbientBackground currentTheme={currentTheme} customParticleUrl={currentParticleUrl ?? wedding.assets.ambient_particle_url} />
