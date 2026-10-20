@@ -353,7 +353,7 @@ export default function RoyalInvitesTemplate({ wedding, guest, skipEnvelope = fa
 
   return (
     <>
-      <audio ref={audioRef} src={wedding.assets.audio_url || "https://n7kwk6h7z8gkdqba.public.blob.vercel-storage.com/intro-audio.mp3"} loop playsInline muted={isMuted} />
+      <audio ref={audioRef} src={wedding.assets.audio_url || DEFAULT_AUDIO} loop playsInline muted={isMuted} />
       <AnimatePresence>
         {showEnvelope && <Envelope key="envelope" onOpen={() => setShowEnvelope(false)} audioRef={audioRef} />}
       </AnimatePresence>

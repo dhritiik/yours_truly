@@ -11,7 +11,9 @@
  * Absolute URLs (CMS/Cloudinary assets, e.g. "https://...") are returned
  * unchanged.
  */
-export const BASE_PATH = process.env.NODE_ENV === "production" ? "/i" : "";
+// Injected by next.config.ts (`env.NEXT_PUBLIC_BASE_PATH`) so the prefix is
+// defined in exactly one place and can never drift from the real `basePath`.
+export const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
 export function withBasePath(path: string): string {
   if (!path) return path;

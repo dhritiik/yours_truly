@@ -422,7 +422,7 @@ export default function WeddingElegantTemplate({ wedding, guest, skipEnvelope = 
 
   return (
     <>
-      <audio ref={audioRef} src={wedding.assets.audio_url || withBasePath("/wedding-audio.mp3")} loop muted={isMuted} />
+      <audio ref={audioRef} src={wedding.assets.audio_url || DEFAULT_AUDIO} loop muted={isMuted} />
       {showEnvelope && <Envelope onOpen={() => setShowEnvelope(false)} isMuted={isMuted} onMuteChange={setIsMuted} audioRef={audioRef} introVideo={wedding.assets.intro_video} introBg={wedding.assets.intro_bg} />}
       
       <AmbientBackground currentTheme={currentTheme} customParticleUrl={currentParticleUrl ?? wedding.assets.ambient_particle_url} />

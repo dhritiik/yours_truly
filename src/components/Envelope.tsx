@@ -2,10 +2,11 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { DEFAULT_INTRO_VIDEO, DEFAULT_INTRO_BG } from "@/lib/defaultAssets";
 
 // Fallback assets if none provided via props
-const DEFAULT_VIDEO = "https://n7kwk6h7z8gkdqba.public.blob.vercel-storage.com/intro.mp4";
-const DEFAULT_BG = "https://n7kwk6h7z8gkdqba.public.blob.vercel-storage.com/bg.png";
+const DEFAULT_VIDEO = DEFAULT_INTRO_VIDEO;
+const DEFAULT_BG = DEFAULT_INTRO_BG;
 
 interface EnvelopeProps {
   onOpen: () => void;

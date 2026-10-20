@@ -8,6 +8,7 @@ import { WeddingData, WeddingEvent, CustomTextSection } from "@/lib/types";
 import { upsertUserProfile } from "@/lib/userService";
 import { getAuth } from "firebase/auth";
 import { getDefaultDescriptionForEvent, getDefaultAmbientEffectForEvent, DEFAULT_THEME_TEXTS } from "@/lib/defaults";
+import { DEFAULT_AUDIO } from "@/lib/defaultAssets";
 import { withBasePath } from "@/lib/basePath";
 
 const sanitizeSlug = (value: string) =>
@@ -36,7 +37,7 @@ function createDefaultWedding(customerId: string): WeddingData {
     assets: {
       hero_image: withBasePath("/hero-background.jpg"),
       logo_image: withBasePath("/logo_sj.png"),
-      audio_url: withBasePath("/wedding-audio.mp3"),
+      audio_url: DEFAULT_AUDIO,
     },
     events: [
       {

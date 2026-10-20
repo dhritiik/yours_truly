@@ -36,5 +36,16 @@ const firebaseConfig = {
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApps()[0];
 
 export const db = getFirestore(app);
-export const auth = getAuth(app);
+// getAuth() throws synchronously if apiKey is missing/invalid (e.g. during a
+// build/prerender pass where env vars aren't configured for the environment).
+// Guard it so an unrelated route's "collect page data" step can't crash the
+// entire `next build`.
+export const auth = (() => {
+  try {
+    return getAuth(app);
+  } catch (err) {
+    console.error("[Firebase] Failed to initialize auth:", err);
+    return null as unknown as ReturnType<typeof getAuth>;
+  }
+})();
 export default app;
