@@ -9,6 +9,7 @@
 
 import { useState } from "react";
 import type { WeddingData, Guest } from "@/lib/types";
+import { withBasePath } from "@/lib/basePath";
 
 type Variant = "classic" | "royal";
 
@@ -55,7 +56,7 @@ export default function RsvpSection({ wedding, guest, variant = "classic" }: {
     if (!guest) return;
     setBusy(true); setError("");
     try {
-      const res = await fetch("/api/rsvp", {
+      const res = await fetch(withBasePath("/api/rsvp"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
