@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Users, Upload, Plus, Trash2, Copy, Check, MessageCircle,
@@ -27,6 +27,7 @@ import {
 } from "@/lib/csvImporter";
 import {
   subscribeToGuests,
+  subscribeToPublicRsvps,
   importGuests,
   saveGuest,
   updateGuest,
@@ -875,7 +876,16 @@ export default function GuestsPage() {
   const { selectedCustomerId } = useCustomer();
   const { wedding, addEvent, updateEvent, removeEvent } = useWedding();
 
-  const [guests, setGuests] = useState<Guest[]>([]);
+  const [rawGuests, setGuests] = useState<Guest[]>([]);
+  const [publicRsvps, setPublicRsvps] = useState<Map<string, { rsvp_status: Guest["rsvp_status"]; rsvp_updated_at?: string }>>(new Map());
+  // Overlay live RSVP responses (written to the public doc) onto the private list
+  const guests = useMemo(
+    () => rawGuests.map((g) => {
+      const r = publicRsvps.get(g.guest_slug || g.guest_id);
+      return r && r.rsvp_status !== "Pending" ? { ...g, ...r } : g;
+    }),
+    [rawGuests, publicRsvps]
+  );
   const [guestsLoading, setGuestsLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<"All" | Guest["rsvp_status"]>("All");
@@ -892,6 +902,12 @@ export default function GuestsPage() {
     });
     return unsub;
   }, [selectedCustomerId]);
+
+  useEffect(() => {
+    const slug = wedding?.slug?.trim();
+    if (!slug) return;
+    return subscribeToPublicRsvps(slug, setPublicRsvps);
+  }, [wedding?.slug]);
 
   // ── Handlers ─────────────────────────────────────────────────────────────────
 

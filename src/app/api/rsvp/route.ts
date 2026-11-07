@@ -147,18 +147,17 @@ export async function POST(request: NextRequest) {
         await updateDoc(publicGuestRef, updatePayload);
 
         // Update private guest (dual-write — prevents stale data on re-publish)
-        const weddingRef = doc(db, "weddings", sanitisedSlug);
-        const weddingSnap = await getDoc(weddingRef);
-        if (weddingSnap.exists()) {
-          const ownerUid = weddingSnap.data().owner_uid as string | undefined;
+        // Best-effort only: unauthenticated callers cannot write private docs
+        // under current rules. The dashboard reads RSVPs from the public doc.
+        try {
+          const weddingSnap = await getDoc(doc(db, "weddings", sanitisedSlug));
+          const ownerUid = weddingSnap.exists() ? (weddingSnap.data().owner_uid as string | undefined) : undefined;
+          const privateId = (guestData.guest_id as string | undefined) ?? guest_id;
           if (ownerUid) {
-            const privateRef = doc(db, "users", ownerUid, "guests", guest_id);
-            const privateSnap = await getDoc(privateRef);
-            if (privateSnap.exists()) {
-              await updateDoc(privateRef, updatePayload);
-            }
+            const privateRef = doc(db, "users", ownerUid, "guests", privateId);
+            if ((await getDoc(privateRef)).exists()) await updateDoc(privateRef, updatePayload);
           }
-        }
+        } catch { /* ignore */ }
 
         return NextResponse.json({
           success: true,

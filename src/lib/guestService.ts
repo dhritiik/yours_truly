@@ -145,6 +145,24 @@ export function subscribeToGuests(
   });
 }
 
+/**
+ * Realtime map of guest_slug -> RSVP state from the PUBLIC guest collection,
+ * where guest responses are written. Overlay this on the private list.
+ */
+export function subscribeToPublicRsvps(
+  slug: string,
+  callback: (m: Map<string, { rsvp_status: Guest["rsvp_status"]; rsvp_updated_at?: string }>) => void
+): Unsubscribe {
+  return onSnapshot(publicGuestCollectionPath(slug), (snap) => {
+    const m = new Map<string, { rsvp_status: Guest["rsvp_status"]; rsvp_updated_at?: string }>();
+    snap.docs.forEach((d) => {
+      const g = d.data() as Guest;
+      if (g.rsvp_status) m.set(d.id, { rsvp_status: g.rsvp_status, rsvp_updated_at: g.rsvp_updated_at });
+    });
+    callback(m);
+  }, () => callback(new Map()));
+}
+
 // ── Write operations ──────────────────────────────────────────────────────────
 
 /** Add or fully overwrite a single guest record in the private collection only. */

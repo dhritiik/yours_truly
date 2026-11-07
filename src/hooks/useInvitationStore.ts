@@ -34,8 +34,8 @@ function createDefaultWedding(customerId: string): WeddingData {
       story_text: "",
     },
     assets: {
-      hero_image: withBasePath("/hero-background.jpg"),
-      logo_image: withBasePath("/logo_sj.png"),
+      hero_image: withBasePath("/hero-background.webp"),
+      logo_image: withBasePath("/logo_sj.webp"),
       // audio_url left unset — background music is opt-in via the dashboard.
     },
     events: [
@@ -158,15 +158,15 @@ export function useInvitationStore(customerId: string | null) {
     setWedding((prev) => {
       if (!prev) return prev;
       
-      let newHero = withBasePath("/hero-background.jpg");
-      let newLogo = withBasePath("/logo_sj.png");
+      let newHero = withBasePath("/hero-background.webp");
+      let newLogo = withBasePath("/logo_sj.webp");
       
       if (templateId === "Anniversary_v3") {
-        newHero = withBasePath("/hero-anni.jpg");
-        newLogo = withBasePath("/logo-anni.png");
+        newHero = withBasePath("/hero-anni.webp");
+        newLogo = withBasePath("/logo-anni.webp");
       } else if (templateId === "WeddingElegant_v2") {
-        newHero = withBasePath("/hero-wedding2.jpg");
-        newLogo = withBasePath("/logo-wedding2.png");
+        newHero = withBasePath("/hero-wedding2.webp");
+        newLogo = withBasePath("/logo-wedding2.webp");
       } else if (templateId === "RoyalInvites_v1") {
         newHero = withBasePath("/wedding-new-inv-fr-card-m-v01.webp");
         newLogo = withBasePath("/wedding-new-Menu_background.webp");

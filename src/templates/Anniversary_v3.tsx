@@ -9,10 +9,12 @@
 import React, { useEffect, useState, useRef, useImperativeHandle, useMemo } from "react";
 import { motion } from "framer-motion";
 import { WeddingData, Guest } from "@/lib/types";
+import RsvpSection from "@/components/RsvpSection";
 import Envelope from "@/components/Envelope"; // Wait, I will use a shared one but identical
 import { RenderCustomText } from "@/components/RenderCustomText";
 import { AmbientBackground, ThemeType } from "@/components/TemplateAmbientBackground";
 import { withBasePath } from "@/lib/basePath";
+import { cldImagePreset, cldVideo } from "@/lib/cloudinary";
 
 export type { ThemeType };
 
@@ -67,7 +69,7 @@ const EventCard = React.forwardRef(function EventCard(
 
   return (
     <motion.div
-      className={`${isMameru ? 'w-80 h-[32rem] md:w-96 md:h-[32rem]' : 'w-80 h-[30rem] md:w-96 md:h-[30rem]'} z-10 cursor-pointer`}
+      className={`${isMameru ? 'h-[32rem]' : 'h-[30rem]'} w-full z-10 cursor-pointer`}
       onClick={() => { setIsFlipped(!isFlipped); onUserInteraction(event.event_id); }}
       whileHover={{ scale: 1.05 }}
       transition={{ type: "spring", stiffness: 300 }}
@@ -84,7 +86,7 @@ const EventCard = React.forwardRef(function EventCard(
           style={{ backfaceVisibility: "hidden" }}
         >
           {event.image_url ? (
-            <img src={event.image_url} alt={event.event_name} className="w-full h-full object-cover object-bottom" />
+            <img src={cldImagePreset(event.image_url, "card")} alt={event.event_name} loading="lazy" decoding="async" className="w-full h-full object-cover object-bottom" />
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-gold/20 to-sage/20 flex items-center justify-center">
               <p className="text-center text-muted-foreground font-display text-xl">{event.event_name}</p>
@@ -93,7 +95,7 @@ const EventCard = React.forwardRef(function EventCard(
         </motion.div>
 
         <motion.div
-          className="absolute w-full h-full bg-cream rounded-lg p-6 invitation-shadow flex flex-col overflow-y-auto"
+          className="absolute w-full h-full bg-cream rounded-lg p-4 sm:p-6 invitation-shadow flex flex-col overflow-y-auto"
           style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
         >
           <div className="flex flex-col items-center justify-center mb-4">
@@ -102,13 +104,11 @@ const EventCard = React.forwardRef(function EventCard(
           </div>
           
           <div className="flex justify-center mb-3">
-            <motion.h3 
-              className={`font-display text-xl md:text-2xl px-6 py-2 rounded-full shadow-sm text-center ${getTitleStyles(event.event_name)}`}
-              animate={{ scale: [1, 1.02, 1] }}
-              transition={{ duration: 2, repeat: Infinity }}
+            <h3
+              className={`font-display text-lg sm:text-xl md:text-2xl px-4 sm:px-6 py-2 rounded-full shadow-sm text-center ${getTitleStyles(event.event_name)}`}
             >
               {event.event_name}
-            </motion.h3>
+            </h3>
           </div>
           
           <div className="font-body text-black leading-snug text-base flex-grow text-center flex flex-col justify-center">
@@ -269,14 +269,6 @@ const EventTimeline = ({ events, filteredEventIds, guestCountText, onThemeChange
       });
       if (maxRatio < 0.4) bestId = null;
 
-      // Update theme + particle based on currently visible event
-      if (bestId !== null && eventMapRef.current[bestId]) {
-        const event = eventMapRef.current[bestId];
-        const theme = getThemeFromAmbientEffect(event.ambient_effect);
-        onThemeChange(theme);
-        onParticleChange?.(event.particle_image_url || undefined);
-      }
-
       if (activeCardIdRef.current !== bestId) {
         const prevId = activeCardIdRef.current;
         activeCardIdRef.current = bestId;
@@ -298,11 +290,23 @@ const EventTimeline = ({ events, filteredEventIds, guestCountText, onThemeChange
           }
         }
       }
-    }, { threshold: [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1] });
+    }, { threshold: [0, 0.25, 0.5, 0.75, 1] });
 
     Object.values(elementRefs.current).forEach((el) => { if (el) observer.observe(el); });
     return () => { observer.disconnect(); Object.values(timersRef.current).forEach(clearTimeout); };
-  }, [visibleGroups, getThemeFromAmbientEffect, onThemeChange, onParticleChange]);
+  }, [visibleGroups]);
+
+  // The ambient background theme + particle image are set ONCE for the whole
+  // invite (from the first event that specifies an ambient_effect), not
+  // per-event-in-view — a selected effect like "petals" should stay the same
+  // background throughout the invite rather than switching as the guest
+  // scrolls past each event.
+  useEffect(() => {
+    const themed = events.find((e) => e.ambient_effect && e.ambient_effect !== 'none');
+    onThemeChange(getThemeFromAmbientEffect(themed?.ambient_effect));
+    onParticleChange?.(themed?.particle_image_url || undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [events]);
 
   return (
     <div className="relative">
@@ -323,7 +327,7 @@ const EventTimeline = ({ events, filteredEventIds, guestCountText, onThemeChange
                 {group.title}
               </motion.h3>
 
-              <div className="relative w-full max-w-4xl mx-auto px-6 flex flex-col items-center">
+              <div className="relative w-full max-w-4xl mx-auto px-4 sm:px-6 flex flex-col items-center">
                 <div className="space-y-12 md:space-y-20 w-full flex flex-col items-center">
                   {group.events.map((event, eventIndex) => {
                     if (!cardApiRefs.current[event.event_id]) cardApiRefs.current[event.event_id] = React.createRef();
@@ -345,14 +349,13 @@ const EventTimeline = ({ events, filteredEventIds, guestCountText, onThemeChange
                             className={`w-80 md:w-96 z-10 relative mx-auto ${eventIndex % 2 === 0 ? "md:mr-auto" : "md:ml-auto"}`}
                           >
                             <EventCard ref={cardApiRefs.current[event.event_id]} event={event} guestCountSuffix={guestCountText || null} onUserInteraction={handleUserInteraction} eventSeats={eventSeats} customNote={guest?.custom_note} />
-                            <motion.p
-                              className={`text-center font-bold font-body text-sm mt-3 italic transition-colors duration-500 ${
+                            <p
+                              className={`text-center font-bold font-body text-sm mt-3 italic animate-pulse transition-colors duration-500 ${
                                   getThemeForGroup(group.title) === 'reception' ? 'text-white/60' : 'text-muted-foreground'
                               }`}
-                              animate={{ opacity: [0.6, 1, 0.6] }} transition={{ duration: 2, repeat: Infinity }}
                             >
                               Tap Above to Flip
-                            </motion.p>
+                            </p>
                           </div>
                         </motion.div>
                       </div>
@@ -417,17 +420,15 @@ export default function AnniversaryTemplate({ wedding, guest, skipEnvelope = fal
     return () => clearTimeout(timer);
   }, [showEnvelope]);
 
-  const logo = wedding.assets.logo_image || withBasePath("/logo_sj.png");
-  const heroImg = wedding.assets.hero_image || withBasePath("/hero-background.jpg");
+  const logo = cldImagePreset(wedding.assets.logo_image, "logo") || withBasePath("/logo_sj.webp");
+  const heroImg = cldImagePreset(wedding.assets.hero_image, "hero") || withBasePath("/hero-background.webp");
 
   return (
     <>
       {wedding.assets.audio_url && (
-        <audio ref={audioRef} src={wedding.assets.audio_url} loop muted={isMuted} />
+        <audio ref={audioRef} src={cldVideo(wedding.assets.audio_url)} loop muted={isMuted} />
       )}
       {showEnvelope && <Envelope onOpen={() => setShowEnvelope(false)} isMuted={isMuted} onMuteChange={setIsMuted} audioRef={audioRef} introVideo={wedding.assets.intro_video} introBg={wedding.assets.intro_bg} />}
-      
-      <AmbientBackground currentTheme={currentTheme} customParticleUrl={currentParticleUrl ?? wedding.assets.ambient_particle_url} />
 
       <motion.div
         ref={containerRef}
@@ -435,13 +436,10 @@ export default function AnniversaryTemplate({ wedding, guest, skipEnvelope = fal
         initial={{ opacity: 0 }}
         animate={!showEnvelope ? { opacity: 1 } : { opacity: 0, pointerEvents: "none" }}
         transition={{ duration: 1.2, delay: 0.8 }}
-        onScroll={(e) => {
-          if ((e.target as HTMLElement).scrollTop < 500 && currentTheme !== 'default') setCurrentTheme('default');
-        }}
       >
         {/* Mute Button */}
         {!showEnvelope && (
-          <motion.button onClick={(e) => { e.stopPropagation(); setIsMuted(!isMuted); }} className="fixed bottom-8 right-8 z-50 p-3 rounded-full bg-black/60 hover:bg-black/80 transition-colors" whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }} title={isMuted ? "Unmute" : "Mute"}>
+          <motion.button onClick={(e) => { e.stopPropagation(); setIsMuted(!isMuted); }} className="fixed bottom-6 right-6 md:bottom-8 md:right-8 z-50 p-3 rounded-full bg-black/60 hover:bg-black/80 transition-colors" whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }} title={isMuted ? "Unmute" : "Mute"}>
             {isMuted ? (
               <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73 4.27 3zM12 4L9.91 6.09 12 8.18V4z" /></svg>
             ) : (
@@ -458,20 +456,18 @@ export default function AnniversaryTemplate({ wedding, guest, skipEnvelope = fal
             className="relative z-10 text-center px-4 md:px-6 flex flex-col items-center w-full"
             initial={{ opacity: 0, y: 40 }} animate={!showEnvelope ? { opacity: 1, y: 0 } : {}} transition={{ duration: 1, delay: 1.2 }}
           >
-            <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={!showEnvelope ? { opacity: 1, scale: 1 } : {}} transition={{ duration: 1, delay: 1.4 }} className="mb-0 md:mb-12 -mt-80 md:mt-0">
-              <img src={logo} alt="Wedding Logo" className="w-64 h-64 md:w-72 md:h-72 object-contain mx-auto drop-shadow-lg" />
+            <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={!showEnvelope ? { opacity: 1, scale: 1 } : {}} transition={{ duration: 1, delay: 1.4 }} className="mb-0 md:mb-12 -mt-24 sm:-mt-32 md:mt-0">
+              <img src={logo} alt="Wedding Logo" className="w-48 h-48 sm:w-64 sm:h-64 md:w-72 md:h-72 object-contain mx-auto drop-shadow-lg" />
             </motion.div>
 
             <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={!showEnvelope ? { opacity: 1, scale: 1 } : {}} transition={{ duration: 1, delay: 1.8 }} className="w-full text-center mt-2 md:mt-0">
-              <motion.h1 
-                className="font-imperial text-gold mb-0 tracking-wide leading-none [text-shadow:0.5px_0_0_currentColor]"
-                animate={{ textShadow: ["0.5px 0 0 currentColor", "0.5px 0 0 currentColor, 0 0 15px rgba(255, 215, 0, 0.3)", "0.5px 0 0 currentColor"] }}
-                transition={{ duration: 3, repeat: Infinity }}
+              <h1
+                className="font-imperial text-gold mb-0 tracking-wide leading-none break-words [text-shadow:0.5px_0_0_currentColor]"
               >
-                <span className="text-6xl md:text-8xl lg:text-[9rem]">{wedding.couple.bride} </span>
-                <span className="text-4xl md:text-6xl lg:text-[6rem] px-2"> &  </span>
-                <span className="text-6xl md:text-8xl lg:text-[9rem]"> {wedding.couple.groom} </span>
-              </motion.h1>
+                <span className="text-4xl sm:text-5xl md:text-8xl lg:text-[9rem]">{wedding.couple.bride} </span>
+                <span className="text-2xl sm:text-3xl md:text-6xl lg:text-[6rem] px-2"> &  </span>
+                <span className="text-4xl sm:text-5xl md:text-8xl lg:text-[9rem]"> {wedding.couple.groom} </span>
+              </h1>
             </motion.div>
           </motion.div>
           
@@ -479,9 +475,9 @@ export default function AnniversaryTemplate({ wedding, guest, skipEnvelope = fal
             className="absolute bottom-10 md:bottom-14 left-0 right-0 flex flex-col items-center justify-center gap-1 z-20"
             initial={{ opacity: 0 }} animate={!showEnvelope ? { opacity: 1, y: [0, 10, 0] } : {}} transition={{ opacity: { duration: 0.8, delay: 2.5 }, y: { duration: 1.5, repeat: Infinity, ease: "easeInOut", delay: 2.5 } }}
           >
-            <motion.p className="text-black font-bold text-xl md:text-2xl tracking-widest uppercase" animate={{ opacity: [0.6, 1, 0.6] }} transition={{ duration: 5, repeat: Infinity }}>
+            <p className="text-black font-bold text-base sm:text-xl md:text-2xl tracking-widest uppercase animate-pulse">
               Scroll for more
-            </motion.p>
+            </p>
             <motion.svg className="w-6 h-6 md:w-8 md:h-8 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24" animate={{ y: [0, 3, 0] }} transition={{ duration: 1.5, repeat: Infinity }}>
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
             </motion.svg>
@@ -489,8 +485,8 @@ export default function AnniversaryTemplate({ wedding, guest, skipEnvelope = fal
         </section>
         
         {/* Family Blessing Section */}
-        <section className="relative bg-white/90 backdrop-blur-sm py-16 md:py-24 overflow-hidden transition-colors duration-700">
-          <div className="container max-w-3xl mx-auto px-2 text-center relative z-10">
+        <section className="relative bg-white/95 py-16 md:py-24 overflow-hidden transition-colors duration-700">
+          <div className="container max-w-3xl mx-auto px-4 sm:px-6 text-center relative z-10">
             <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.8 }}>
               {wedding.religious_header && (
                 <motion.p 
@@ -509,7 +505,7 @@ export default function AnniversaryTemplate({ wedding, guest, skipEnvelope = fal
               />
               <div className="mb-4">
                 {wedding.couple.blessing_families?.map((fam, i) => (
-                  <span key={i} className="block font-body text-xl md:text-2xl text-black italic font-bold leading-relaxed">{fam}</span>
+                  <span key={i} className="block font-body text-lg sm:text-xl md:text-2xl text-black italic font-bold leading-relaxed break-words">{fam}</span>
                 ))}
               </div>
               <RenderCustomText 
@@ -519,24 +515,24 @@ export default function AnniversaryTemplate({ wedding, guest, skipEnvelope = fal
                 delay={0.45}
               />
               
-              <motion.div className="font-body text-xl md:text-2xl text-black mb-4" initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ duration: 0.8, delay: 0.5 }}>
+              <motion.div className="font-body text-lg sm:text-xl md:text-2xl text-black mb-4" initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ duration: 0.8, delay: 0.5 }}>
                 {guest?.name ? (
                   <>
-                    <span className="block">We cordially invite <span className="font-display font-bold text-1xl md:text-2xl text-sage-dark">{guest.name}</span></span>
+                    <span className="block">We cordially invite <span className="font-display font-bold text-sage-dark break-words">{guest.name}</span></span>
                   </>
                 ) : (
                   <span className="block">We cordially invite <span className="font-display font-bold text-sage-dark">You</span></span>
                 )}
               </motion.div>
 
-              <p className="font-body text-xl md:text-2xl text-black leading-relaxed mb-3 max-w-xl mx-auto italic">to grace the {wedding.occasion_label || "wedding ceremony"} of</p>
+              <p className="font-body text-lg sm:text-xl md:text-2xl text-black leading-relaxed mb-3 max-w-xl mx-auto italic">to grace the {wedding.occasion_label || "wedding ceremony"} of</p>
 
               <motion.div initial={{ opacity: 0, scale: 0.95 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} transition={{ duration: 0.8, delay: 0.6 }} className="mb-6">
-                {wedding.couple.bride_parents && <p className="font-body font-black text-base md:text-base uppercase tracking-wide mb-1">({wedding.couple.bride_parents})</p>}
-                <h2 className="font-imperial text-7xl md:text-7xl text-gold mb-0 tracking-wide leading-none">{wedding.couple.bride}</h2>
-                <div className="my-2"><span className="font-display text-5xl text-sage-dark/60">&</span></div>
-                <h2 className="font-imperial text-7xl md:text-7xl text-gold mb-3 tracking-wide leading-none">{wedding.couple.groom}</h2>
-                {wedding.couple.groom_parents && <p className="font-body font-black text-base md:text-base uppercase tracking-wide mt-2 mb-2">({wedding.couple.groom_parents})</p>}
+                {wedding.couple.bride_parents && <p className="font-body font-black text-sm sm:text-base uppercase tracking-wide mb-1">({wedding.couple.bride_parents})</p>}
+                <h2 className="font-imperial text-5xl sm:text-6xl md:text-7xl text-gold mb-0 tracking-wide leading-none break-words">{wedding.couple.bride}</h2>
+                <div className="my-2"><span className="font-display text-4xl sm:text-5xl text-sage-dark/60">&</span></div>
+                <h2 className="font-imperial text-5xl sm:text-6xl md:text-7xl text-gold mb-3 tracking-wide leading-none break-words">{wedding.couple.groom}</h2>
+                {wedding.couple.groom_parents && <p className="font-body font-black text-sm sm:text-base uppercase tracking-wide mt-2 mb-2">({wedding.couple.groom_parents})</p>}
               </motion.div>
 
               <RenderCustomText 
@@ -566,9 +562,10 @@ export default function AnniversaryTemplate({ wedding, guest, skipEnvelope = fal
         
         {/* Timeline Section */}
         <section className="relative py-20 md:py-32 overflow-hidden">
-          <div className="container max-w-4xl mx-auto px-6 relative z-10">
+          <AmbientBackground currentTheme={currentTheme} customParticleUrl={cldImagePreset(currentParticleUrl ?? wedding.assets.ambient_particle_url, "particle") || undefined} />
+          <div className="container max-w-4xl mx-auto px-4 sm:px-6 relative z-10">
              <div className="text-center mb-2">
-                <h2 className={`font-display text-3xl md:text-5xl mb-2 transition-colors duration-500 ${currentTheme === 'reception' ? 'text-white' : 'text-foreground'}`}>
+                <h2 className={`font-display text-2xl sm:text-3xl md:text-5xl mb-2 transition-colors duration-500 ${currentTheme === 'reception' ? 'text-white' : 'text-foreground'}`}>
                   {wedding.occasion_label || "the celebration"}
                 </h2>
              </div>
@@ -593,6 +590,8 @@ export default function AnniversaryTemplate({ wedding, guest, skipEnvelope = fal
           </div>
         </section>
         
+        <RsvpSection wedding={wedding} guest={guest} variant="classic" />
+
         {/* Footer Section */}
         <footer className="bg-sage pt-4 pb-12 md:pt-6 md:pb-16 relative overflow-hidden">
           <div className="text-center relative z-10 flex flex-col items-center">

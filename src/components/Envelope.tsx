@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { DEFAULT_INTRO_VIDEO, DEFAULT_INTRO_BG } from "@/lib/defaultAssets";
+import { cldImagePreset, cldVideo } from "@/lib/cloudinary";
 
 // Fallback assets if none provided via props
 const DEFAULT_VIDEO = DEFAULT_INTRO_VIDEO;
@@ -25,8 +26,8 @@ const Envelope = ({
   introVideo,
   introBg,
 }: EnvelopeProps) => {
-  const videoSrc = introVideo || DEFAULT_VIDEO;
-  const bgSrc = introBg || DEFAULT_BG;
+  const videoSrc = cldVideo(introVideo) || DEFAULT_VIDEO;
+  const bgSrc = cldImagePreset(introBg, "hero") || DEFAULT_BG;
 
   const [phase, setPhase] = useState<"idle" | "playing" | "fallback">("idle");
   const [loadFailed, setLoadFailed] = useState(false);

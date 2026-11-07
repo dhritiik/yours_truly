@@ -129,6 +129,12 @@ service cloud.firestore {
                         get(/databases/$(database)/documents/weddings/$(slug)).data.owner_uid
                           == request.auth.uid);
 
+        // Guest RSVP: anyone may update ONLY rsvp_status / rsvp_updated_at on
+        // an existing guest doc (used by /api/rsvp; token is checked there).
+        allow update: if request.resource.data.diff(resource.data).affectedKeys()
+                           .hasOnly(['rsvp_status', 'rsvp_updated_at'])
+                      && request.resource.data.rsvp_status in ['Accepted', 'Declined'];
+
         // Writes: owner or admin only.
         allow write: if isSignedIn()
                      && (isAdmin() ||

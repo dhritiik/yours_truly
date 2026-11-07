@@ -538,6 +538,13 @@ export default function InvitationEditor() {
               </div>
             </div>
 
+            <Toggle
+              checked={!!wedding.rsvp_enabled}
+              onChange={(v) => updateField("rsvp_enabled", v)}
+              label="Enable RSVP"
+              hint="Adds an RSVP section to the invite. Responses appear in the Guest List."
+            />
+
             <div>
               <Label>Occasion Label</Label>
               <TextInput value={wedding.occasion_label || ""} onChange={(v) => updateField("occasion_label", v)} placeholder="wedding ceremony" />

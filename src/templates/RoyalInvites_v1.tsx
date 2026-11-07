@@ -12,8 +12,10 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "framer-motion";
 import type { WeddingData, Guest } from "@/lib/types";
+import RsvpSection from "@/components/RsvpSection";
 import { AmbientBackground, ThemeType } from "@/components/TemplateAmbientBackground";
 import { withBasePath } from "@/lib/basePath";
+import { cldImagePreset, cldVideo } from "@/lib/cloudinary";
 
 export type { ThemeType };
 
@@ -32,7 +34,7 @@ const ROPE_IMG = withBasePath("/wedding-newrope-hemp-pull-x-v01.webp");
 const ARCH_BG = withBasePath("/wedding-new-inv-fr-card-m-v01.webp");
 const PANEL_BG = withBasePath("/wedding-new-bg-panel-m-v01.webp");
 const GARDEN_BG = withBasePath("/wedding-new-bg-secret-garden-m-v01.webp");
-const PEACOCK = withBasePath("/wedding-new-peacock.png");
+const PEACOCK = withBasePath("/wedding-new-peacock.webp");
 const MENU_BG = withBasePath("/wedding-new-Menu_background.webp");
 const COMPASS_ICON = withBasePath("/wedding-new-compass.webp");
 const MUSIC_ICON = withBasePath("/wedding-new-music_icon.webp");
@@ -129,19 +131,9 @@ const getMotifIcon = (title: string) => {
   return "https://pub-1cc0f6e993214be9a36badeeb631f4b6.r2.dev/templates/template09/assets/event/pn-evt-ico-shaadi-x-v01.webp";
 };
 
-const getThemeForEvent = (title: string): ThemeType => {
-  const t = title.toLowerCase();
-  if (t.includes("mandap") || t.includes("mameru") || t.includes("haldi")) return "mayra";
-  if (t.includes("bhakti") || t.includes("sangeet")) return "bhakti";
-  if (t.includes("jaan") || t.includes("hast melap") || t.includes("wedding")) return "wedding";
-  if (t.includes("reception")) return "reception";
-  return "default";
-};
-
-const FarmanStop = ({ event, seatCountText, onThemeChange }: {
+const FarmanStop = ({ event, seatCountText }: {
   event: WeddingData["events"][0];
   seatCountText: string | null;
-  onThemeChange: (theme: ThemeType) => void;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [animationComplete, setAnimationComplete] = useState(false);
@@ -150,7 +142,7 @@ const FarmanStop = ({ event, seatCountText, onThemeChange }: {
   return (
     <motion.article
       className="farman-stop"
-      onViewportEnter={() => { setIsOpen(true); onThemeChange(getThemeForEvent(event.event_group || event.event_name)); }}
+      onViewportEnter={() => setIsOpen(true)}
       viewport={{ once: true, amount: 0.25 }}
     >
       {!isOpen && (
@@ -200,10 +192,9 @@ const FarmanStop = ({ event, seatCountText, onThemeChange }: {
   );
 };
 
-const EventTimeline = ({ events, guest, onThemeChange }: {
+const EventTimeline = ({ events, guest }: {
   events: WeddingData["events"];
   guest?: Guest | null;
-  onThemeChange: (theme: ThemeType) => void;
 }) => {
   const getGuestEventSeats = (event: WeddingData["events"][0]): number | undefined => {
     if (!guest) return undefined;
@@ -232,20 +223,35 @@ const EventTimeline = ({ events, guest, onThemeChange }: {
         .farman-stop { position: relative; width: 98%; max-width: 520px; margin: 0 auto; z-index: 5; }
         .farman-rolled-wrap { width: 100%; display: flex; justify-content: center; align-items: center; padding: 20px 0; }
         .farman-rolled-img { width: 85%; max-width: 280px; height: auto; }
-        .farman-open-wrap { position: relative; width: 100%; border-radius: 12px; box-shadow: 0 15px 35px rgba(0,0,0,0.18); }
-        .farman-parchment-img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: fill; border-radius: 12px; z-index: 1; }
+        /* No box-shadow/border-radius/background here: those paint a full
+           RECTANGLE behind the scroll, which showed up as a pale halo around
+           the parchment's transparent edges. The shadow is applied as a
+           drop-shadow filter on the parchment image instead, so it follows
+           the artwork's actual alpha silhouette. */
+        .farman-open-wrap { position: relative; width: 100%; background: transparent; }
+        .farman-parchment-img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: fill; z-index: 1; filter: drop-shadow(0 15px 25px rgba(0,0,0,0.25)); }
         .farman-peacock { position: absolute; top: -40px; right: -10px; width: 120px; height: auto; z-index: 15; pointer-events: none; opacity: 0.95; }
         @media (min-width: 768px) { .farman-peacock { width: 160px; top: -50px; right: -20px; } }
-        .farman-content { position: relative; z-index: 10; padding: 60px 40px; display: flex; flex-direction: column; align-items: center; text-align: center; }
-        .farman-motif { width: 75px; height: auto; margin-bottom: 18px; }
-        .farman-name { font-family: 'Cinzel', serif; font-size: 1.8rem; font-weight: 700; color: #863745; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
-        .farman-rule { width: 80px; height: 1px; background-color: #d8c29d; margin-bottom: 14px; }
-        .farman-datetime { font-family: 'Cormorant Garamond', serif; font-size: 1.4rem; font-weight: 700; color: #3b4435; margin-bottom: 8px; }
-        .farman-venue { font-family: 'Cormorant Garamond', serif; font-size: 1.25rem; font-weight: 600; color: #4f5348; margin-bottom: 12px; }
-        .farman-note { font-family: 'Cormorant Garamond', serif; font-size: 1.2rem; font-style: italic; color: #4f5348; }
-        .farman-guest-count { margin-top: 12px; font-family: 'Cormorant Garamond', serif; font-size: 1.1rem; color: #863745; font-weight: 600; }
-        .farman-map { display: inline-flex; align-items: center; margin-top: 16px; font-family: 'Cormorant Garamond', serif; font-size: 1rem; color: #863745; text-decoration: underline; }
-        .farman-map-rule { width: 60px; height: 1px; background-color: #d8c29d; margin-top: 10px; }
+        /* Dynamic/organic sizing restored: the card's height follows its own
+           content (title + date + venue + description) exactly like the
+           original design, with the parchment image stretched (object-fit:
+           fill) to match whatever height that content produces — rather than
+           being locked to a fixed aspect-ratio that left large empty scroll
+           space for short text or clipped content for long text.
+           Padding and type both scale with the viewport via clamp() so the
+           ~320px-wide parchment on a small phone still gets readable text
+           without the old fixed 40px side padding causing overflow. */
+        .farman-content { position: relative; z-index: 10; padding: clamp(36px, 11vw, 68px) clamp(28px, 10vw, 56px); display: flex; flex-direction: column; align-items: center; text-align: center; width: 84%; margin: 0 auto; box-sizing: border-box; }
+        .farman-content > * { max-width: 100%; overflow-wrap: break-word; hyphens: auto; }
+        .farman-motif { width: clamp(40px, 12vw, 75px); height: auto; margin-bottom: 14px; }
+        .farman-name { font-family: 'Cinzel', serif; font-size: clamp(1rem, 4.2vw, 1.8rem); font-weight: 700; color: #863745; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px; }
+        .farman-rule { width: 80px; height: 1px; background-color: #d8c29d; margin-bottom: 10px; }
+        .farman-datetime { font-family: 'Cormorant Garamond', serif; font-size: clamp(0.85rem, 3.2vw, 1.4rem); font-weight: 700; color: #3b4435; margin-bottom: 6px; }
+        .farman-venue { font-family: 'Cormorant Garamond', serif; font-size: clamp(0.8rem, 2.9vw, 1.25rem); font-weight: 600; color: #4f5348; margin-bottom: 8px; }
+        .farman-note { font-family: 'Cormorant Garamond', serif; font-size: clamp(0.78rem, 2.7vw, 1.2rem); font-style: italic; color: #4f5348; line-height: 1.35; }
+        .farman-guest-count { margin-top: 10px; font-family: 'Cormorant Garamond', serif; font-size: clamp(0.85rem, 2.9vw, 1.1rem); color: #863745; font-weight: 600; }
+        .farman-map { display: inline-flex; align-items: center; margin-top: 12px; font-family: 'Cormorant Garamond', serif; font-size: 1rem; color: #863745; text-decoration: underline; }
+        .farman-map-rule { width: 60px; height: 1px; background-color: #d8c29d; margin-top: 8px; }
         .farman-dust-layer { position: absolute; inset: 0; z-index: 2; pointer-events: none; overflow: hidden; }
         .farman-dust-dot { position: absolute; border-radius: 50%; background-color: rgba(216, 169, 87, 0.4); animation: floatDust 6s infinite ease-in-out; }
         .dot-1 { width: 3px; height: 3px; left: 20%; bottom: 25%; animation-duration: 5s; animation-delay: 1s; }
@@ -254,6 +260,10 @@ const EventTimeline = ({ events, guest, onThemeChange }: {
         .dot-4 { width: 3.5px; height: 3.5px; right: 40%; bottom: 35%; animation-duration: 8s; animation-delay: 3s; }
         @keyframes floatDust { 0%, 100% { transform: translateY(0) translateX(0) scale(1); opacity: 0; } 50% { transform: translateY(-20px) translateX(10px) scale(1.2); opacity: 0.8; } }
         @media (min-width: 768px) { .farman-inter--lotus img { width: 160px; max-width: 200px; } }
+        /* The dust motes are decorative and animate forever on every card in
+           the list, which keeps the compositor busy on low-end phones. Drop
+           them entirely when the OS asks for reduced motion. */
+        @media (prefers-reduced-motion: reduce) { .farman-dust-layer { display: none; } }
       `}</style>
 
       {visibleEvents.length > 0 ? (
@@ -263,7 +273,7 @@ const EventTimeline = ({ events, guest, onThemeChange }: {
             const seatCountText = typeof seats === "number" ? `${seats} ${seats === 1 ? "seat" : "seats"} reserved` : null;
             return (
               <React.Fragment key={event.event_id}>
-                <FarmanStop event={event} seatCountText={seatCountText} onThemeChange={onThemeChange} />
+                <FarmanStop event={event} seatCountText={seatCountText} />
                 {index < visibleEvents.length - 1 && (
                   index === 2 ? (
                     <div className="farman-inter farman-inter--lotus" aria-hidden="true">
@@ -307,9 +317,27 @@ const EventTimeline = ({ events, guest, onThemeChange }: {
 // ---------------------------------------------------------
 // MAIN INVITATION TEMPLATE
 // ---------------------------------------------------------
+// A single consistent ambient effect for the whole invite — derived once
+// from the first event that specifies one (so "rose petals" picked for the
+// Haldi, say, shows as the background everywhere, not just during Haldi).
+// Replaces the old per-event-in-view theme switching, which made the
+// background effect change every time a guest scrolled past a new event.
+function getWeddingTheme(events: WeddingData["events"]): ThemeType {
+  for (const event of events) {
+    switch (event.ambient_effect) {
+      case "petals": return "mayra";
+      case "lights": return "bhakti";
+      case "rice_roses": return "wedding";
+      case "stars": return "reception";
+      default: continue;
+    }
+  }
+  return "default";
+}
+
 export default function RoyalInvitesTemplate({ wedding, guest, skipEnvelope = false }: TemplateProps) {
   const [showEnvelope, setShowEnvelope] = useState(!skipEnvelope);
-  const [currentTheme, setCurrentTheme] = useState<ThemeType>("default");
+  const currentTheme = useMemo(() => getWeddingTheme(wedding.events), [wedding.events]);
   const containerRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isMuted, setIsMuted] = useState(false);
@@ -354,13 +382,11 @@ export default function RoyalInvitesTemplate({ wedding, guest, skipEnvelope = fa
   return (
     <>
       {wedding.assets.audio_url && (
-        <audio ref={audioRef} src={wedding.assets.audio_url} loop playsInline muted={isMuted} />
+        <audio ref={audioRef} src={cldVideo(wedding.assets.audio_url)} loop playsInline muted={isMuted} />
       )}
       <AnimatePresence>
         {showEnvelope && <Envelope key="envelope" onOpen={() => setShowEnvelope(false)} audioRef={audioRef} />}
       </AnimatePresence>
-
-      <AmbientBackground currentTheme={currentTheme} customParticleUrl={wedding.assets.ambient_particle_url} />
 
       <motion.div
         ref={containerRef}
@@ -368,9 +394,6 @@ export default function RoyalInvitesTemplate({ wedding, guest, skipEnvelope = fa
         initial={{ opacity: 0 }}
         animate={!showEnvelope ? { opacity: 1 } : { opacity: 0, pointerEvents: "none" }}
         transition={{ duration: 0.8 }}
-        onScroll={(e) => {
-          if ((e.target as HTMLElement).scrollTop < 500 && currentTheme !== "default") setCurrentTheme("default");
-        }}
       >
         {/* Floating Action Buttons */}
         <div className="fixed bottom-6 right-4 z-50 flex flex-col gap-3 pointer-events-none">
@@ -483,19 +506,20 @@ export default function RoyalInvitesTemplate({ wedding, guest, skipEnvelope = fa
 
         {/* Events Timeline */}
         <section id="events" className="relative py-20 bg-[#1e132a]">
+          <AmbientBackground currentTheme={currentTheme} customParticleUrl={cldImagePreset(wedding.assets.ambient_particle_url, "particle") || undefined} />
           <div className="container mx-auto px-4 relative z-10">
             <div className="text-center mb-16">
               <p className="text-[#c79b4a] uppercase tracking-widest text-xs mb-2 font-bold">Celebration Journey</p>
-              <h2 className="font-serif text-4xl text-[#fdfbf7] italic">Our Events</h2>
+              <h2 className="font-serif text-3xl sm:text-4xl text-[#fdfbf7] italic">Our Events</h2>
             </div>
-            <EventTimeline events={wedding.events} guest={guest} onThemeChange={setCurrentTheme} />
+            <EventTimeline events={wedding.events} guest={guest} />
           </div>
         </section>
 
         {/* Compliments */}
         <section className="relative py-16 bg-cover bg-center bg-no-repeat overflow-hidden" style={{ backgroundImage: `url('${GARDEN_BG}')` }}>
           <div className="container max-w-2xl mx-auto px-4 text-center relative z-10">
-            <motion.div className="bg-[#fdfbf7]/85 backdrop-blur-md p-8 md:p-12 rounded-3xl border border-[#e5d9c5] shadow-lg max-w-xl mx-auto"
+            <motion.div className="bg-[#fdfbf7]/95 p-6 sm:p-8 md:p-12 rounded-3xl border border-[#e5d9c5] shadow-lg max-w-xl mx-auto"
               initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.8 }}>
               <div className="flex items-center justify-center gap-3 mb-6">
                 <div className="h-px w-10 bg-[#d8c29d]" /><span className="text-[#c79b4a] text-lg">✦</span><div className="h-px w-10 bg-[#d8c29d]" />
@@ -533,6 +557,8 @@ export default function RoyalInvitesTemplate({ wedding, guest, skipEnvelope = fa
             </motion.div>
           </div>
         </section>
+
+        <RsvpSection wedding={wedding} guest={guest} variant="royal" />
 
         {/* Footer */}
         <footer className="bg-[#2c1a0e] pt-8 pb-20 relative overflow-hidden">

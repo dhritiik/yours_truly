@@ -45,6 +45,7 @@ export interface Guest {
   invited_events?: string[];
   rsvp_status: "Pending" | "Accepted" | "Declined";
   custom_note?: string;          // Personal message shown on their invite
+  rsvp_updated_at?: string;      // ISO timestamp of the guest's last RSVP response
   created_at: string;
   imported_via?: "csv" | "manual";
 }
@@ -120,6 +121,7 @@ export interface WeddingData {
     fontSize: string;       // e.g. "text-xl", "text-2xl"
     color: string;          // e.g. "text-gold", "text-black"
   };
+  rsvp_enabled?: boolean;    // Optional: show RSVP section on the invite (default off)
   occasion_label?: string;   // e.g., "wedding ceremony" or "50th Anniversary Celebration"
   theme_texts?: Record<string, CustomTextSection>;
   created_at: string;
