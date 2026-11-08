@@ -1,5 +1,14 @@
 // Core multi-tenant data types for the YoursTruly platform
 
+export interface DressCode {
+  enabled: boolean;
+  label?: string;        // brush title, default "Dresscode"
+  theme?: string;        // e.g. "Shades of Yellow"
+  shades: string[];      // hex colours shown as swatches
+  note?: string;         // free text, e.g. "Suit for men · lehenga or saree for women"
+  image_url?: string;    // optional illustration shown beside the text
+}
+
 export interface WeddingEvent {
   event_id: string;
   event_name: string;        // e.g., "Dinner and Dancing"
@@ -15,7 +24,16 @@ export interface WeddingEvent {
   // Customization fields
   ambient_effect?: 'petals' | 'lights' | 'rice_roses' | 'stars' | 'none'; // Background effect
   particle_image_url?: string; // Custom image URL for falling particles (PNG with transparency)
+  dress_code?: DressCode;     // Optional dress-code block on the event card
   isDescriptionCustomized?: boolean;  // Track if user customized description
+}
+
+export interface StoryCard {
+  id: string;
+  date: string;          // free text shown above the photo, e.g. "June 2019"
+  title?: string;        // optional short heading, e.g. "The First Hello"
+  image_url: string;     // Cloudinary URL (optional visually — placeholder if empty)
+  description: string;
 }
 
 export interface Guest {
@@ -121,6 +139,9 @@ export interface WeddingData {
     fontSize: string;       // e.g. "text-xl", "text-2xl"
     color: string;          // e.g. "text-gold", "text-black"
   };
+  story_enabled?: boolean;   // Optional swipeable "Our Story" section (default off)
+  story_heading?: string;    // Defaults to "Our Story"
+  story_cards?: StoryCard[];
   rsvp_enabled?: boolean;    // Optional: show RSVP section on the invite (default off)
   occasion_label?: string;   // e.g., "wedding ceremony" or "50th Anniversary Celebration"
   theme_texts?: Record<string, CustomTextSection>;

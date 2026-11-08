@@ -13,6 +13,8 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "framer-motion";
 import type { WeddingData, Guest } from "@/lib/types";
 import RsvpSection from "@/components/RsvpSection";
+import StorySection from "@/components/StorySection";
+import DressCodeBlock from "@/components/DressCodeBlock";
 import { AmbientBackground, ThemeType } from "@/components/TemplateAmbientBackground";
 import { withBasePath } from "@/lib/basePath";
 import { cldImagePreset, cldVideo } from "@/lib/cloudinary";
@@ -171,6 +173,7 @@ const FarmanStop = ({ event, seatCountText }: {
               <p key={i} className={i > 0 ? "mt-1" : ""}>{line.trim()}</p>
             ))}
           </div>
+          <DressCodeBlock dressCode={event.dress_code} variant="royal" />
           {seatCountText && <p className="farman-guest-count">looking forward to welcome: {seatCountText}</p>}
           {event.maps_url && (
             <a className="farman-map" href={event.maps_url} target="_blank" rel="noreferrer">
@@ -503,6 +506,8 @@ export default function RoyalInvitesTemplate({ wedding, guest, skipEnvelope = fa
             </motion.div>
           </div>
         </section>
+
+        <StorySection wedding={wedding} variant="royal" />
 
         {/* Events Timeline */}
         <section id="events" className="relative py-20 bg-[#1e132a]">

@@ -10,6 +10,8 @@ import React, { useEffect, useState, useRef, useImperativeHandle, useMemo } from
 import { motion } from "framer-motion";
 import { WeddingData, Guest } from "@/lib/types";
 import RsvpSection from "@/components/RsvpSection";
+import StorySection from "@/components/StorySection";
+import DressCodeBlock from "@/components/DressCodeBlock";
 import Envelope from "@/components/Envelope"; // Wait, I will use a shared one but identical
 import { RenderCustomText } from "@/components/RenderCustomText";
 import { AmbientBackground, ThemeType } from "@/components/TemplateAmbientBackground";
@@ -69,7 +71,9 @@ const EventCard = React.forwardRef(function EventCard(
 
   return (
     <motion.div
-      className={`${isMameru ? 'h-[32rem]' : 'h-[30rem]'} w-full z-10 cursor-pointer`}
+      className="w-full z-10 cursor-pointer"
+      // Original card height is unchanged; dress code only ADDS extra room.
+      style={{ height: `${(isMameru ? 32 : 30) + (event.dress_code?.enabled ? (event.dress_code.image_url ? 16 : 12) : 0)}rem` }}
       onClick={() => { setIsFlipped(!isFlipped); onUserInteraction(event.event_id); }}
       whileHover={{ scale: 1.05 }}
       transition={{ type: "spring", stiffness: 300 }}
@@ -127,6 +131,8 @@ const EventCard = React.forwardRef(function EventCard(
                return <p key={i} className={i > 0 ? "mt-1" : ""}>{trimmed}</p>;
              })}
           </div>
+
+          <DressCodeBlock dressCode={event.dress_code} variant="classic" />
 
           {seatCountText && (
             <div className="mt-3 mb-2 text-center">
@@ -560,6 +566,8 @@ export default function WeddingElegantTemplate({ wedding, guest, skipEnvelope = 
           </div>
         </section>
         
+        <StorySection wedding={wedding} variant="classic" />
+
         {/* Timeline Section */}
         <section className="relative py-20 md:py-32 overflow-hidden">
           <AmbientBackground currentTheme={currentTheme} customParticleUrl={cldImagePreset(currentParticleUrl ?? wedding.assets.ambient_particle_url, "particle") || undefined} />

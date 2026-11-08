@@ -218,7 +218,7 @@ export function useInvitationStore(customerId: string | null) {
     });
   }, [saveToFirestore]);
 
-  const updateEvent = useCallback((eventId: string, field: keyof WeddingEvent, value: string) => {
+  const updateEvent = useCallback((eventId: string, field: keyof WeddingEvent, value: WeddingEvent[keyof WeddingEvent]) => {
     setWedding((prev) => {
       if (!prev) return prev;
       const next = {

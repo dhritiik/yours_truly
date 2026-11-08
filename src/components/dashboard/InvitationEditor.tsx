@@ -12,7 +12,7 @@ import { useWedding } from "@/contexts/WeddingContext";
 import TemplatePicker from "./TemplatePicker";
 import PhonePreview from "./PhonePreview";
 import ImageUploader from "./ImageUploader";
-import { WeddingData, WeddingEvent } from "@/lib/types";
+import { WeddingData, WeddingEvent, StoryCard, DressCode } from "@/lib/types";
 
 // ---------- Small helpers ----------
 function SectionCard({ title, icon: Icon, children, accent = "gold" }: {
@@ -85,7 +85,7 @@ function Toggle({ checked, onChange, label, hint }: {
 
 function EventsEditor({ wedding, updateEvent, addEvent, removeEvent, moveEvent, updateEventAmbientEffect, revertEventDescriptionToDefault }: {
   wedding: WeddingData;
-  updateEvent: (id: string, field: keyof WeddingEvent, val: string) => void;
+  updateEvent: (id: string, field: keyof WeddingEvent, val: WeddingEvent[keyof WeddingEvent]) => void;
   addEvent: () => void;
   removeEvent: (id: string) => void;
   moveEvent: (id: string, direction: "up" | "down") => void;
@@ -207,6 +207,10 @@ function EventsEditor({ wedding, updateEvent, addEvent, removeEvent, moveEvent, 
                       )}
                     </div>
                   </div>
+                  <DressCodeEditor
+                    value={event.dress_code}
+                    onChange={(dc) => updateEvent(event.event_id, "dress_code", dc)}
+                  />
                   <div>
                     <Label>Background Ambient Effect</Label>
                     <select 
@@ -245,6 +249,88 @@ function EventsEditor({ wedding, updateEvent, addEvent, removeEvent, moveEvent, 
         <Plus className="h-3.5 w-3.5" />
         Add Event
       </button>
+    </div>
+  );
+}
+
+
+// ---------- Dress Code Editor (per event) ----------
+const SHADE_PRESETS: { label: string; shades: string[] }[] = [
+  { label: "Yellow", shades: ["#FDE68A", "#FACC15", "#F59E0B"] },
+  { label: "Pastels", shades: ["#FBCFE8", "#BAE6FD", "#DDD6FE"] },
+  { label: "Red & Gold", shades: ["#991B1B", "#DC2626", "#D4A017"] },
+  { label: "Green", shades: ["#BBF7D0", "#4ADE80", "#166534"] },
+  { label: "Blues", shades: ["#BFDBFE", "#60A5FA", "#1E3A8A"] },
+  { label: "Ivory", shades: ["#FFFFFF", "#FAF3E0", "#E8D9BD"] },
+];
+
+function DressCodeEditor({ value, onChange }: { value?: DressCode; onChange: (v: DressCode) => void }) {
+  const dc: DressCode = value ?? { enabled: false, shades: [] };
+  const set = (p: Partial<DressCode>) => onChange({ ...dc, ...p });
+  return (
+    <div className="rounded-xl border border-[#E8E0D8] p-3 space-y-2 bg-[#FDFBF7]">
+      <Toggle
+        checked={!!dc.enabled}
+        onChange={(v) => set({
+          enabled: v,
+          ...(v && dc.shades.length === 0 ? { shades: SHADE_PRESETS[0].shades, label: dc.label || "Dresscode" } : {}),
+        })}
+        label="Dress Code"
+        hint="Shows a dress-code block with colour shades on this event's card."
+      />
+      {dc.enabled && (
+        <>
+          <div className="grid grid-cols-2 gap-2">
+            <div><Label>Heading</Label><TextInput value={dc.label || ""} onChange={(v) => set({ label: v })} placeholder="Dresscode" /></div>
+            <div><Label>Theme</Label><TextInput value={dc.theme || ""} onChange={(v) => set({ theme: v })} placeholder="Shades of Yellow" /></div>
+          </div>
+          <div>
+            <Label>Colour Shades</Label>
+            <div className="flex flex-wrap gap-2 mb-2">
+              {SHADE_PRESETS.map((p) => (
+                <button key={p.label} type="button" onClick={() => set({ shades: p.shades })}
+                  className="flex items-center gap-1 px-2 py-1 rounded-full border border-[#E8E0D8] bg-white text-[10px] font-sans hover:bg-[#F5EFE6]">
+                  {p.shades.map((c) => <span key={c} className="h-3 w-3 rounded-full border border-black/10" style={{ background: c }} />)}
+                  {p.label}
+                </button>
+              ))}
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              {dc.shades.map((c, i) => (
+                <div key={i} className="flex items-center gap-1 rounded-lg border border-[#E8E0D8] bg-white pl-1 pr-1.5 py-1">
+                  <input type="color" value={c} onChange={(e) => set({ shades: dc.shades.map((x, j) => (j === i ? e.target.value : x)) })}
+                    className="h-7 w-7 cursor-pointer rounded border-0 bg-transparent p-0" aria-label={`Shade ${i + 1}`} />
+                  <span className="font-sans text-[10px] uppercase text-muted-foreground">{c}</span>
+                  <button type="button" onClick={() => set({ shades: dc.shades.filter((_, j) => j !== i) })}
+                    className="text-muted-foreground hover:text-red-500" aria-label="Remove shade"><Trash2 className="h-3 w-3" /></button>
+                </div>
+              ))}
+              {dc.shades.length < 6 && (
+                <button type="button" onClick={() => set({ shades: [...dc.shades, "#D4A017"] })}
+                  className="h-9 px-2 rounded-lg border border-dashed border-[hsl(43,75%,50%)] text-[hsl(43,75%,40%)] text-xs font-sans flex items-center gap-1">
+                  <Plus className="h-3 w-3" /> Shade
+                </button>
+              )}
+            </div>
+          </div>
+          <div>
+            <Label>Note for guests</Label>
+            <textarea
+              value={dc.note || ""} rows={2}
+              onChange={(e) => set({ note: e.target.value })}
+              placeholder="e.g. Suit for men · Lehenga or saree for women"
+              className="w-full rounded-lg border border-[#E8E0D8] bg-white px-3 py-2 font-sans text-xs outline-none focus:border-[hsl(43,75%,50%)] focus:ring-2 focus:ring-[hsl(43,75%,50%)]/15"
+            />
+          </div>
+          <ImageUploader
+            label="Illustration (optional)"
+            value={dc.image_url || ""}
+            onUpload={(url) => set({ image_url: url })}
+            hint="Your dressed-up couple/figure image (transparent PNG works best). Shown beside the dress-code text."
+            previewHeight={110}
+          />
+        </>
+      )}
     </div>
   );
 }
@@ -642,6 +728,81 @@ export default function InvitationEditor() {
                 updateEventAmbientEffect={updateEventAmbientEffect}
                 revertEventDescriptionToDefault={revertEventDescriptionToDefault}
              />
+          </SectionCard>
+
+          {/* ── Our Story (swipeable cards) ── */}
+          <SectionCard title="Our Story" icon={Sparkles}>
+            <Toggle
+              checked={!!wedding.story_enabled}
+              onChange={(v) => {
+                updateField("story_enabled", v);
+                if (v && !(wedding.story_cards?.length)) {
+                  updateField("story_cards", [
+                    { id: crypto.randomUUID(), date: "2019", title: "How We Met", image_url: "", description: "Tell guests how your story began." },
+                    { id: crypto.randomUUID(), date: "2023", title: "The Proposal", image_url: "", description: "The moment everything changed." },
+                    { id: crypto.randomUUID(), date: "2026", title: "Forever Begins", image_url: "", description: "And now, we celebrate with you." },
+                  ] as StoryCard[]);
+                }
+              }}
+              label="Enable Our Story"
+              hint="Adds a swipeable photo-card story section to the invite."
+            />
+            {wedding.story_enabled && (
+              <>
+                <div>
+                  <Label>Section Heading</Label>
+                  <TextInput value={wedding.story_heading || ""} onChange={(v) => updateField("story_heading", v)} placeholder="Our Story" />
+                </div>
+                {(wedding.story_cards ?? []).map((card, i, arr) => {
+                  const setCards = (next: StoryCard[]) => updateField("story_cards", next);
+                  const patch = (p: Partial<StoryCard>) => setCards(arr.map((c) => (c.id === card.id ? { ...c, ...p } : c)));
+                  const move = (d: number) => {
+                    const j = i + d; if (j < 0 || j >= arr.length) return;
+                    const n = [...arr]; [n[i], n[j]] = [n[j], n[i]]; setCards(n);
+                  };
+                  return (
+                    <div key={card.id} className="rounded-xl border border-[#E8E0D8] p-3 space-y-2 bg-[#FDFBF7]">
+                      <div className="flex items-center justify-between">
+                        <p className="font-sans text-xs font-semibold text-[hsl(25,30%,12%)]">Card {i + 1}</p>
+                        <div className="flex items-center gap-1">
+                          <button type="button" onClick={() => move(-1)} disabled={i === 0} className="p-1.5 rounded-lg hover:bg-[#F5EFE6] disabled:opacity-30"><ArrowUp className="h-3.5 w-3.5" /></button>
+                          <button type="button" onClick={() => move(1)} disabled={i === arr.length - 1} className="p-1.5 rounded-lg hover:bg-[#F5EFE6] disabled:opacity-30"><ArrowDown className="h-3.5 w-3.5" /></button>
+                          <button type="button" onClick={() => setCards(arr.filter((c) => c.id !== card.id))} className="p-1.5 rounded-lg hover:bg-red-50 text-muted-foreground hover:text-red-500"><Trash2 className="h-3.5 w-3.5" /></button>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div><Label>Date</Label><TextInput value={card.date} onChange={(v) => patch({ date: v })} placeholder="June 2019" /></div>
+                        <div><Label>Title (optional)</Label><TextInput value={card.title || ""} onChange={(v) => patch({ title: v })} placeholder="How We Met" /></div>
+                      </div>
+                      <ImageUploader
+                        label="Photo"
+                        value={card.image_url}
+                        onUpload={(url) => patch({ image_url: url })}
+                        hint="Portrait photo works best (4:5)."
+                        previewHeight={120}
+                      />
+                      <div>
+                        <Label>Description</Label>
+                        <textarea
+                          value={card.description}
+                          onChange={(e) => patch({ description: e.target.value })}
+                          rows={3}
+                          placeholder="A few lines about this moment…"
+                          className="w-full rounded-lg border border-[#E8E0D8] bg-white px-3 py-2 font-sans text-sm outline-none transition-all focus:border-[hsl(43,75%,50%)] focus:ring-2 focus:ring-[hsl(43,75%,50%)]/15"
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+                <button
+                  type="button"
+                  onClick={() => updateField("story_cards", [...(wedding.story_cards ?? []), { id: crypto.randomUUID(), date: "", title: "", image_url: "", description: "" }])}
+                  className="w-full h-10 rounded-lg border border-dashed border-[hsl(43,75%,50%)] text-[hsl(43,75%,40%)] font-sans text-sm font-medium hover:bg-[hsl(43,75%,50%)]/5 flex items-center justify-center gap-1.5"
+                >
+                  <Plus className="h-4 w-4" /> Add story card
+                </button>
+              </>
+            )}
           </SectionCard>
 
           {/* ── Media Assets ── */}
