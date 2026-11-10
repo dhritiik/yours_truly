@@ -14,20 +14,22 @@ import { cldImagePreset } from "@/lib/cloudinary";
 type Variant = "classic" | "royal";
 
 const T: Record<Variant, {
-  label: string; theme: string; note: string; ring: string; stroke: (c: string) => React.CSSProperties;
+  label: string; theme: string; note: string; ring: string; stroke: (c: string) => React.CSSProperties; titleRem: number;
 }> = {
   classic: {
-    label: "font-imperial text-3xl sm:text-4xl leading-none text-sage-dark",
+    label: "font-imperial leading-none text-sage-dark",
     theme: "font-display font-bold uppercase tracking-wide text-sage-dark text-xs sm:text-sm md:text-base",
     note: "font-body italic text-sage-dark/80 text-xs sm:text-sm leading-snug",
     ring: "ring-2 ring-white shadow-md",
+    titleRem: 1.5,
     stroke: (c) => ({ background: `linear-gradient(100deg, ${c}00 0%, ${c}88 8%, ${c}cc 50%, ${c}88 92%, ${c}00 100%)` }),
   },
   royal: {
-    label: "font-serif italic text-2xl sm:text-3xl leading-none text-[#863745]",
+    label: "font-serif italic leading-none text-[#863745]",
     theme: "font-serif font-bold uppercase tracking-widest text-[#3b4435] text-[11px] sm:text-sm",
     note: "font-serif italic text-[#4f5348] text-xs sm:text-sm leading-snug",
     ring: "ring-2 ring-[#fdfbf7] shadow-md",
+    titleRem: 1.25,
     stroke: (c) => ({ background: `linear-gradient(100deg, ${c}00 0%, ${c}66 10%, ${c}99 50%, ${c}66 90%, ${c}00 100%)` }),
   },
 };
@@ -37,24 +39,25 @@ export default function DressCodeBlock({ dressCode, variant = "classic" }: {
 }) {
   if (!dressCode?.enabled) return null;
   const t = T[variant];
-  const shades = (dressCode.shades ?? []).filter(Boolean);
+  const shades = dressCode.show_shades === false ? [] : (dressCode.shades ?? []).filter(Boolean);
+  const pct = (v?: number) => (v ?? 100) / 100;
   const hasImage = !!dressCode.image_url;
-  const first = shades[0] ?? "#FACC15";
+  const first = dressCode.shades?.find(Boolean) ?? "#FACC15"; // brush stroke keeps the theme colour even if circles are hidden
 
   const text = (
     <div className={`flex flex-col items-center text-center gap-2 ${hasImage ? "" : "w-full"}`}>
       <div className="px-5 py-2 -rotate-1 w-full max-w-[16rem]" style={t.stroke(first)}>
-        <p className={t.label}>{dressCode.label || "Dresscode"}</p>
-        {dressCode.theme && <p className={`${t.theme} mt-1`}>{dressCode.theme}</p>}
+        <p className={t.label} style={{ fontSize: `${t.titleRem * pct(dressCode.title_size)}rem` }}>{dressCode.label || "Dresscode"}</p>
+        {dressCode.theme && <p className={`${t.theme} mt-1`} style={{ zoom: pct(dressCode.text_size) }}>{dressCode.theme}</p>}
       </div>
       {shades.length > 0 && (
         <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3">
           {shades.map((c, i) => (
-            <span key={i} className={`h-7 w-7 sm:h-9 sm:w-9 md:h-10 md:w-10 rounded-full ${t.ring}`} style={{ backgroundColor: c }} aria-label={`Shade ${c}`} />
+            <span key={i} className={`rounded-full ${t.ring}`} style={{ backgroundColor: c, width: 26 * pct(dressCode.swatch_size), height: 26 * pct(dressCode.swatch_size) }} aria-label={`Shade ${c}`} />
           ))}
         </div>
       )}
-      {dressCode.note && <p className={`${t.note} max-w-[16rem] whitespace-pre-line`}>{dressCode.note}</p>}
+      {dressCode.note && <p className={`${t.note} max-w-[16rem] whitespace-pre-line`} style={{ zoom: pct(dressCode.text_size) }}>{dressCode.note}</p>}
     </div>
   );
 

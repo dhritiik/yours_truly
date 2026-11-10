@@ -7,6 +7,10 @@ export interface DressCode {
   shades: string[];      // hex colours shown as swatches
   note?: string;         // free text, e.g. "Suit for men · lehenga or saree for women"
   image_url?: string;    // optional illustration shown beside the text
+  show_shades?: boolean; // hide the colour circles when false (default true)
+  title_size?: number;   // % of default heading size (default 100)
+  swatch_size?: number;  // % of default circle size (default 100)
+  text_size?: number;    // % of default theme/note size (default 100)
 }
 
 export interface WeddingEvent {

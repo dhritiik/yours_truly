@@ -284,7 +284,18 @@ function DressCodeEditor({ value, onChange }: { value?: DressCode; onChange: (v:
             <div><Label>Heading</Label><TextInput value={dc.label || ""} onChange={(v) => set({ label: v })} placeholder="Dresscode" /></div>
             <div><Label>Theme</Label><TextInput value={dc.theme || ""} onChange={(v) => set({ theme: v })} placeholder="Shades of Yellow" /></div>
           </div>
-          <div>
+          <div className="grid grid-cols-3 gap-2">
+            {([["title_size", "Heading size"], ["text_size", "Text size"], ["swatch_size", "Circle size"]] as const).map(([k, l]) => (
+              <div key={k}>
+                <Label>{l} ({dc[k] ?? 100}%)</Label>
+                <input type="range" min={50} max={150} step={5} value={dc[k] ?? 100}
+                  onChange={(e) => set({ [k]: Number(e.target.value) })} className="w-full accent-[hsl(43,75%,50%)]" />
+              </div>
+            ))}
+          </div>
+          <Toggle checked={dc.show_shades !== false} onChange={(v) => set({ show_shades: v })}
+            label="Show colour circles" hint="Turn off to hide the shade circles on the card." />
+          {dc.show_shades !== false && <div>
             <Label>Colour Shades</Label>
             <div className="flex flex-wrap gap-2 mb-2">
               {SHADE_PRESETS.map((p) => (
@@ -312,7 +323,7 @@ function DressCodeEditor({ value, onChange }: { value?: DressCode; onChange: (v:
                 </button>
               )}
             </div>
-          </div>
+          </div>}
           <div>
             <Label>Note for guests</Label>
             <textarea
