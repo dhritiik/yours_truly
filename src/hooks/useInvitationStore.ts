@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { doc, getDoc, setDoc } from "firebase/firestore";
-import { publishGuestList } from "@/lib/guestService";
+import { doc, getDoc, setDoc, deleteField } from "firebase/firestore";
+import { publishGuestList, expiryStamp } from "@/lib/guestService";
+import { endOfDay } from "@/lib/expiry";
+import { saveReport, recountGuests } from "@/lib/reportService";
 import { db } from "@/lib/firebase";
 import { WeddingData, WeddingEvent, CustomTextSection } from "@/lib/types";
 import { upsertUserProfile } from "@/lib/userService";
@@ -296,12 +298,29 @@ export function useInvitationStore(customerId: string | null) {
       if (!normalizedSlug) {
         return { success: false, error: "Please enter a valid slug using letters, numbers, or hyphens." };
       }
+      // /report/{token} is the shared report page — a wedding there would be unreachable.
+      if (normalizedSlug === "report") {
+        return { success: false, error: "\"report\" is reserved. Please choose another slug." };
+      }
 
-      // Slug collision guard: do not allow publishing over another customer's live invitation.
+      const expireAt = endOfDay(wedding.end_date);
+      if (wedding.end_date?.trim() && !expireAt) {
+        return { success: false, error: "Wedding end date must be a real date in DD/MM/YYYY format." };
+      }
+      // A past end date would publish links that are already dead — refuse,
+      // it's almost certainly a typo.
+      if (expireAt && expireAt.getTime() < Date.now()) {
+        return { success: false, error: "Wedding end date is in the past. Set a future date before publishing." };
+      }
+
+      // Slug collision guard: do not allow publishing over another customer's
+      // live invitation — or over their permanent archive, which outlives it.
       const publicRef = doc(db, "weddings", normalizedSlug);
-      const existingPublicSnap = await getDoc(publicRef);
-      if (existingPublicSnap.exists()) {
-        const existingData = existingPublicSnap.data() as Partial<WeddingData>;
+      const archiveRef = doc(db, "wedding_archives", normalizedSlug);
+      for (const ref of [publicRef, archiveRef]) {
+        const existingSnap = await getDoc(ref);
+        if (!existingSnap.exists()) continue;
+        const existingData = existingSnap.data() as Partial<WeddingData>;
         const existingOwnerUid = existingData.owner_uid;
         const sameWedding = existingData.wedding_id === wedding.wedding_id;
         const sameOwner = existingOwnerUid === customerId;
@@ -321,8 +340,12 @@ export function useInvitationStore(customerId: string | null) {
         published_at: new Date().toISOString(),
       };
 
+      // Permanent copy served once the live docs expire or the admin deletes
+      // them: no expire_at, no guests, and RSVP off (no guest to RSVP as).
+      await setDoc(archiveRef, { ...publishedData, rsvp_enabled: false });
+
       // Write public wedding doc
-      await setDoc(publicRef, publishedData);
+      await setDoc(publicRef, { ...publishedData, ...expiryStamp(wedding.end_date) });
 
       // Also update the draft with published_at so UI knows it's live
       const draftRef = doc(db, "customers", customerId, "invitation", "draft");
@@ -333,10 +356,32 @@ export function useInvitationStore(customerId: string | null) {
 
       // Update customers/{customerId} with the active slug
       const customerRef = doc(db, "customers", customerId);
-      await setDoc(customerRef, { invitation_slug: normalizedSlug }, { merge: true });
+      // A republish after "Delete data" makes the customer live again.
+      await setDoc(customerRef, { invitation_slug: normalizedSlug, end_date: wedding.end_date?.trim() ?? "", deletion: deleteField() }, { merge: true });
 
       // Sync private guest list to public weddings/{slug}/guests/ collection
-      await publishGuestList(customerId, normalizedSlug);
+      await publishGuestList(customerId, normalizedSlug, wedding.end_date);
+
+      // (Re)create the consolidated report with a full recount — the one place
+      // it is counted from scratch; everything else just increments it.
+      await saveReport(normalizedSlug, {
+        customer_id: customerId,
+        created_by: getAuth().currentUser?.uid ?? "",
+        bride_name: wedding.couple.bride,
+        groom_name: wedding.couple.groom,
+        end_date: wedding.end_date?.trim() ?? "",
+        expires_at: expireAt?.toISOString() ?? "",
+        // Names are kept here so the report still labels events after
+        // "Delete data" removes the invitation.
+        event_list: wedding.events.map((e) => ({
+          event_id: e.event_id,
+          name: e.event_group?.trim() && e.event_group.trim() !== e.event_name.trim()
+            ? `${e.event_group.trim()} · ${e.event_name}`
+            : e.event_name,
+        })),
+        final: false,
+        ...(await recountGuests(customerId, normalizedSlug)),
+      });
 
       return { success: true, slug: normalizedSlug };
     } catch (e) {

@@ -114,6 +114,38 @@ export interface Customer {
   notes?: string;
   created_at: string;
   status?: "active" | "archived";
+  /** Set on publish: slug of the live invitation and its "DD/MM/YYYY" end date. */
+  invitation_slug?: string;
+  end_date?: string;
+  /**
+   * Set by "Delete data" on the Insights page (deleteCustomerData):
+   * "started" = report frozen, deletes in progress (or failed halfway — retry);
+   * "done" = draft + guest data are gone. Cleared on the next publish.
+   */
+  deletion?: "started" | "done";
+}
+
+/** wedding_reports/{slug} — consolidated numbers for one published wedding. */
+export interface WeddingReport {
+  slug: string;
+  customer_id: string;
+  created_by: string;  // admin uid — Insights lists reports by this
+  bride_name: string;
+  groom_name: string;
+  end_date: string;    // "DD/MM/YYYY", "" if none
+  expires_at?: string; // ISO instant the links expire ("" if none) — exact, unlike end_date
+  invites: number;     // guest records = personal links created
+  accepted: number;
+  declined: number;
+  pending: number;
+  /** Seats reserved per event: event_id -> sum of every invite's seats for it. */
+  event_seats?: Record<string, number>;
+  /** Events in invitation order, captured at publish (names survive data deletion). */
+  event_list?: { event_id: string; name: string }[];
+  /** Secret id for the public read-only page /report/{share_token}. */
+  share_token?: string;
+  updated_at: string;  // ISO
+  final?: boolean;     // frozen: guest data deleted, numbers can no longer change
 }
 
 export interface WeddingData {
@@ -151,6 +183,8 @@ export interface WeddingData {
   theme_texts?: Record<string, CustomTextSection>;
   created_at: string;
   published_at?: string;     // Set when user explicitly publishes — null means draft-only
+  end_date?: string;         // "DD/MM/YYYY" — invite links expire at the end of this day (see lib/expiry.ts)
+  expired?: boolean;         // Never stored: set by getWeddingData when serving wedding_archives/{slug}
   owner_uid?: string;        // The uid of the user who owns this invitation
 }
 

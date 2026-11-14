@@ -8,26 +8,16 @@ import { User } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  PencilLine, ClipboardList, Users, SquareCheckBig, LayoutGrid,
-  Send, ChartColumn, Settings, Download, CreditCard,
+  PencilLine, Users, Send, ChartColumn,
   LogOut, X, Menu, Sparkles, UserCog, ChevronDown,
 } from "lucide-react";
 import { useCustomer } from "@/contexts/CustomerContext";
 
-const PRIMARY_NAV = [
+const NAV = [
+  { href: "/dashboard/analytics", label: "Insights", icon: ChartColumn },
   { href: "/dashboard", label: "My Invitation", icon: PencilLine },
-  { href: "/dashboard/guests", label: "Guest List", icon: Users, upgrade: true },
+  { href: "/dashboard/guests", label: "Guest List", icon: Users },
   { href: "/dashboard/share", label: "Share", icon: Send },
-];
-
-const SECONDARY_NAV = [
-  { href: "/dashboard/planner", label: "Planner", icon: ClipboardList },
-  { href: "/dashboard/rsvps", label: "Responses", icon: SquareCheckBig, upgrade: true },
-  { href: "/dashboard/seating", label: "Seating", icon: LayoutGrid, upgrade: true },
-  { href: "/dashboard/analytics", label: "Insights", icon: ChartColumn, upgrade: true },
-  { href: "/dashboard/settings", label: "RSVP Settings", icon: Settings, upgrade: true },
-  { href: "/dashboard/export", label: "Download Data", icon: Download, upgrade: true },
-  { href: "/dashboard/plan", label: "Plan & Billing", icon: CreditCard },
 ];
 
 interface DashboardShellProps {
@@ -94,13 +84,11 @@ function NavItem({
   href,
   label,
   icon: Icon,
-  upgrade,
   onClick,
 }: {
   href: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
-  upgrade?: boolean;
   onClick?: () => void;
 }) {
   const pathname = usePathname();
@@ -118,11 +106,6 @@ function NavItem({
     >
       <Icon className={`h-4 w-4 shrink-0 ${isActive ? "text-[hsl(43,75%,50%)]" : "text-[hsl(25,10%,55%)] group-hover:text-[hsl(25,30%,12%)]"}`} />
       <span className="flex-1">{label}</span>
-      {upgrade && (
-        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700">
-          Soon
-        </span>
-      )}
     </Link>
   );
 }
@@ -154,18 +137,13 @@ function Sidebar({ user, onClose }: { user: User; onClose?: () => void }) {
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto py-4">
         <CustomerSelector />
-        <div className="space-y-0.5 px-3 mb-4">
-          {PRIMARY_NAV.map((item) => (
+        <div className="space-y-0.5 px-3">
+          {NAV.map((item) => (
             <NavItem key={item.href} {...item} onClick={onClose} />
           ))}
           {isAdmin && (
             <NavItem href="/dashboard/customers" label="Customers" icon={UserCog} onClick={onClose} />
           )}
-        </div>
-        <div className="border-t border-[#E8E0D8] pt-3 px-3 space-y-0.5">
-          {SECONDARY_NAV.map((item) => (
-            <NavItem key={item.href} {...item} onClick={onClose} />
-          ))}
         </div>
       </nav>
 

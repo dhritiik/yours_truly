@@ -1,4 +1,4 @@
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, Timestamp } from "firebase/firestore";
 import { unstable_cache } from "next/cache";
 
 import { db } from "@/lib/firebase";
@@ -104,18 +104,27 @@ export const getWeddingData = unstable_cache(
     try {
       // Direct document read — O(1), no index needed.
       // Wedding document is keyed by slug: weddings/{slug}
-      const docRef = doc(db, "weddings", slug);
-      const snap = await getDoc(docRef);
-      if (!snap.exists()) return null;
+      type Stored = WeddingData & { expire_at?: Timestamp };
+      let snap = await getDoc(doc(db, "weddings", slug));
+      let data = snap.data() as Stored | undefined;
 
-      const data = snap.data() as WeddingData;
+      // Live doc is past its end date, or the admin deleted it (Insights page):
+      // serve the permanent copy from wedding_archives/{slug} instead.
+      const expired = !data || (!!data.expire_at && data.expire_at.toMillis() <= Date.now());
+      if (expired) {
+        snap = await getDoc(doc(db, "wedding_archives", slug));
+        data = snap.data() as Stored | undefined;
+      }
+      if (!data) return null;
 
       // Strip owner_uid before passing to the template component.
       // It stays in Firestore for ownership rule validation, but must NOT
       // be embedded in the HTML/JS bundle served to guests (security §4.2).
+      // expire_at is a Timestamp class instance, which can't cross the
+      // server -> client component boundary (or the JSON cache) either.
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { owner_uid, ...publicData } = data as WeddingData & { owner_uid?: string };
-      return publicData;
+      const { owner_uid, expire_at, ...publicData } = data;
+      return expired ? { ...publicData, expired: true } : publicData;
     } catch (error) {
       console.error("Error fetching wedding data:", error);
       return null;

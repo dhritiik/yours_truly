@@ -9,7 +9,8 @@ import {
 } from "lucide-react";
 import { useCustomer } from "@/contexts/CustomerContext";
 import { useWedding } from "@/contexts/WeddingContext";
-import { Guest, WeddingData, WeddingEvent } from "@/lib/types";
+import { Guest, WeddingData, WeddingEvent, WeddingReport } from "@/lib/types";
+import { bumpReport, saveReport, countGuests, subscribeToReport, reportMatches } from "@/lib/reportService";
 import {
   parseGuestCsv,
   parseSeatCell,
@@ -602,7 +603,8 @@ function GuestRow({
 
     // Update only THIS guest in the public collection — O(1) instead of O(N×3)
     if (wedding.slug?.trim()) {
-      await syncSingleGuestToPublic(wedding.slug, updated);
+      await syncSingleGuestToPublic(wedding.slug, updated, wedding.end_date);
+      await bumpReport(wedding.slug, guest, updated);
     }
 
     setSaving(false);
@@ -648,7 +650,9 @@ function GuestRow({
           <button onClick={onDelete} className="p-1.5 rounded-lg hover:bg-red-50 transition-colors text-muted-foreground hover:text-red-500">
             <Trash2 className="h-3.5 w-3.5" />
           </button>
-          <button onClick={() => setExpanded(!expanded)} className="p-1.5 rounded-lg hover:bg-[#F5EFE6] transition-colors text-muted-foreground">
+          {/* Re-copy the guest on open: the form was frozen at first render, before
+              live RSVPs arrived, so saving it overwrote the guest's real answer. */}
+          <button onClick={() => { if (!expanded) setEditing({ ...guest }); setExpanded(!expanded); }} className="p-1.5 rounded-lg hover:bg-[#F5EFE6] transition-colors text-muted-foreground">
             {expanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
           </button>
         </div>
@@ -806,7 +810,8 @@ function AddGuestModal({
 
     // Write only this guest to public — not a full publishGuestList
     if (wedding.slug?.trim()) {
-      await syncSingleGuestToPublic(wedding.slug, guest);
+      await syncSingleGuestToPublic(wedding.slug, guest, wedding.end_date);
+      await bumpReport(wedding.slug, undefined, guest);
     }
 
     setSaving(false);
@@ -894,10 +899,17 @@ export default function GuestsPage() {
   const [importing, setImporting] = useState(false);
 
   // Realtime guest listener (private collection — source of truth)
+  // Which customer / slug the loaded data belongs to, so the report repair
+  // below never mixes one customer's guests into another's report mid-switch.
+  const [guestsOwner, setGuestsOwner] = useState<string | null>(null);
+  const [rsvpsSlug, setRsvpsSlug] = useState<string | null>(null);
+  const [report, setReport] = useState<WeddingReport | null>(null);
+
   useEffect(() => {
     if (!selectedCustomerId) return;
     const unsub = subscribeToGuests(selectedCustomerId, (g) => {
       setGuests(g);
+      setGuestsOwner(selectedCustomerId);
       setGuestsLoading(false);
     });
     return unsub;
@@ -906,8 +918,27 @@ export default function GuestsPage() {
   useEffect(() => {
     const slug = wedding?.slug?.trim();
     if (!slug) return;
-    return subscribeToPublicRsvps(slug, setPublicRsvps);
+    const unsubRsvps = subscribeToPublicRsvps(slug, (m) => {
+      setPublicRsvps(m);
+      setRsvpsSlug(slug);
+    });
+    const unsubReport = subscribeToReport(slug, setReport);
+    return () => { unsubRsvps(); unsubReport(); };
   }, [wedding?.slug]);
+
+  // Self-heal the stored report: this page already holds the true list (private
+  // guests + live RSVPs), so if the report's counters drifted (a +1/-1 write
+  // that failed or raced), overwrite them. No extra reads; writes only on a mismatch.
+  useEffect(() => {
+    const slug = wedding?.slug?.trim();
+    if (!slug || !report || report.final || report.slug !== slug) return;
+    if (report.customer_id !== selectedCustomerId || guestsOwner !== selectedCustomerId || rsvpsSlug !== slug) return;
+    const counts = countGuests(guests);
+    if (reportMatches(report, counts)) return;
+    // Wait out multi-step saves (private write → public write → increment).
+    const t = setTimeout(() => saveReport(slug, counts).catch(console.warn), 1500);
+    return () => clearTimeout(t);
+  }, [report, guests, guestsOwner, rsvpsSlug, selectedCustomerId, wedding?.slug]);
 
   // ── Handlers ─────────────────────────────────────────────────────────────────
 
@@ -931,11 +962,13 @@ export default function GuestsPage() {
       wedding.slug?.trim() ? wedding.slug : undefined
     );
 
-    await importGuests(selectedCustomerId, wedding.wedding_id, toImport);
+    const imported = await importGuests(selectedCustomerId, wedding.wedding_id, toImport);
 
     // Full sync to public (only called on import, not on individual edits)
     if (wedding.slug?.trim()) {
-      await publishGuestList(selectedCustomerId, wedding.slug);
+      await publishGuestList(selectedCustomerId, wedding.slug, wedding.end_date);
+      // Import replaces the whole list, so the report restarts from it.
+      await saveReport(wedding.slug, countGuests(imported)).catch(console.warn);
     }
 
     setImporting(false);
@@ -954,6 +987,7 @@ export default function GuestsPage() {
       wedding?.slug?.trim() ? wedding.slug : undefined,
       guestSlug
     );
+    await bumpReport(wedding?.slug, guests.find((g) => g.guest_id === guestId), undefined);
   };
 
   const handleClearAll = async () => {
@@ -963,6 +997,7 @@ export default function GuestsPage() {
       selectedCustomerId,
       wedding?.slug?.trim() ? wedding.slug : undefined
     );
+    if (wedding?.slug?.trim()) await saveReport(wedding.slug, countGuests([])).catch(console.warn);
   };
 
   const events = wedding?.events ?? [];

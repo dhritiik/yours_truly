@@ -4,12 +4,16 @@
  * Optional RSVP block shared by all templates. Rendered only when
  * `wedding.rsvp_enabled` is true and the visitor arrived via a personal link
  * (we need a guest identity). Styling follows the template via `variant`.
- * Responses go to /api/rsvp and show up in the dashboard guest list.
+ * Responses are written directly to Firestore and show up in the dashboard guest list.
  */
 
 import { useState } from "react";
+import { doc, updateDoc, increment } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import type { WeddingData, Guest } from "@/lib/types";
-import { withBasePath } from "@/lib/basePath";
+
+// rsvp_status -> counter field on wedding_reports/{slug}
+const KEY = { Pending: "pending", Accepted: "accepted", Declined: "declined" } as const;
 
 type Variant = "classic" | "royal";
 
@@ -56,17 +60,22 @@ export default function RsvpSection({ wedding, guest, variant = "classic" }: {
     if (!guest) return;
     setBusy(true); setError("");
     try {
-      const res = await fetch(withBasePath("/api/rsvp"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          wedding_slug: wedding.slug,
-          guest_id: guest.guest_slug || guest.guest_id,
-          token: guest.guest_token,
-          status: choice,
-        }),
+      // Straight to Firestore (no API route). firestore.rules lets anyone change
+      // only rsvp_status / rsvp_updated_at on an unexpired guest doc.
+      const now = new Date().toISOString();
+      await updateDoc(doc(db, "weddings", wedding.slug, "guests", guest.guest_slug || guest.guest_id), {
+        rsvp_status: choice,
+        rsvp_updated_at: now,
       });
-      if (!res.ok) throw new Error();
+      // Move this invite between the report's counters. Best-effort: the RSVP
+      // is already saved; a missing/frozen report must not fail it, and any
+      // drift is fixed by the dashboard's Refresh / Guest List self-heal.
+      const prev = KEY[status], next = KEY[choice];
+      if (prev !== next) {
+        updateDoc(doc(db, "wedding_reports", wedding.slug), {
+          [prev]: increment(-1), [next]: increment(1), updated_at: now,
+        }).catch(() => {});
+      }
       setStatus(choice); setEditing(false);
     } catch {
       setError("Sorry, we couldn't save your response. Please try again.");

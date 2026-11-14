@@ -8,7 +8,7 @@
  * Architecture:
  * - Private collection is the single source of truth for guest data.
  * - Public collection is a mirror for guest-facing magic link views.
- * - RSVP status is written to BOTH collections simultaneously (see /api/rsvp/route.ts).
+ * - Guests' RSVPs are written to the PUBLIC doc only (RsvpSection); the dashboard overlays them.
  * - publishGuestList() uses a smart merge — preserves rsvp_status from public.
  * - Individual guest edits call syncSingleGuestToPublic() — O(1) not O(N×3).
  *
@@ -33,9 +33,21 @@ import {
   onSnapshot,
   Unsubscribe,
   WriteBatch,
+  Timestamp,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Guest } from "@/lib/types";
+import { endOfDay } from "@/lib/expiry";
+
+/**
+ * `expire_at` for public docs, from the wedding's "DD/MM/YYYY" end date.
+ * Must be a real Firestore Timestamp: firestore.rules compares it with
+ * request.time to cut off access. Empty when no end date is set.
+ */
+export function expiryStamp(endDate?: string): { expire_at?: Timestamp } {
+  const d = endOfDay(endDate);
+  return d ? { expire_at: Timestamp.fromDate(d) } : {};
+}
 
 // Firestore batch limit is 500 operations; use 490 as a safe margin.
 const BATCH_CHUNK_SIZE = 490;
@@ -160,7 +172,8 @@ export function subscribeToPublicRsvps(
       if (g.rsvp_status) m.set(d.id, { rsvp_status: g.rsvp_status, rsvp_updated_at: g.rsvp_updated_at });
     });
     callback(m);
-  }, () => callback(new Map()));
+    // On error report nothing: an empty map would read as "nobody has RSVP'd".
+  }, (e) => console.warn("Live RSVPs unavailable:", e));
 }
 
 // ── Write operations ──────────────────────────────────────────────────────────
@@ -257,14 +270,15 @@ export async function clearGuests(uid: string, slug?: string): Promise<void> {
  */
 export async function syncSingleGuestToPublic(
   slug: string,
-  guest: Guest
+  guest: Guest,
+  endDate?: string
 ): Promise<void> {
   if (!slug.trim()) return;
   // Guests created before guest_slug existed fall back to guest_id so they
   // still publish (just without a pretty URL) rather than silently no-op.
   const key = guest.guest_slug?.trim() || guest.guest_id;
   // Strip phone_number — it must never appear in the public collection
-  await setDoc(publicGuestPath(slug, key), toPublicGuest(guest));
+  await setDoc(publicGuestPath(slug, key), { ...toPublicGuest(guest), ...expiryStamp(endDate) });
 }
 
 /**
@@ -278,7 +292,7 @@ export async function syncSingleGuestToPublic(
  *
  * Call on: Explicit "Publish" or CSV import. NOT on individual guest edits.
  */
-export async function publishGuestList(uid: string, slug: string): Promise<void> {
+export async function publishGuestList(uid: string, slug: string, endDate?: string): Promise<void> {
   const [privateSnap, publicSnap] = await Promise.all([
     getDocs(guestCollectionPath(uid)),
     getDocs(publicGuestCollectionPath(slug)),
@@ -339,7 +353,7 @@ export async function publishGuestList(uid: string, slug: string): Promise<void>
       ? { ...toPublicGuest(privateData), guest_slug: slugKey, ...preservedRsvp }
       : { ...toPublicGuest(privateData), guest_slug: slugKey };
 
-    allOps.push((batch) => batch.set(ref, publicData));
+    allOps.push((batch) => batch.set(ref, { ...publicData, ...expiryStamp(endDate) }));
   });
 
   await commitInChunks(allOps);

@@ -13,6 +13,7 @@ import TemplatePicker from "./TemplatePicker";
 import PhonePreview from "./PhonePreview";
 import ImageUploader from "./ImageUploader";
 import { WeddingData, WeddingEvent, StoryCard, DressCode } from "@/lib/types";
+import { endOfDay } from "@/lib/expiry";
 
 // ---------- Small helpers ----------
 function SectionCard({ title, icon: Icon, children, accent = "gold" }: {
@@ -496,6 +497,7 @@ export default function InvitationEditor() {
   };
 
   const [showTemplatePicker, setShowTemplatePicker] = useState(false);
+  const endDate = endOfDay(wedding?.end_date);
 
   if (loading || !wedding) {
     return (
@@ -660,6 +662,18 @@ export default function InvitationEditor() {
               {wedding.published_at && (
                 <p className="font-sans text-[10px] text-emerald-600 mt-1">✓ Published · Last live: {new Date(wedding.published_at).toLocaleString()}</p>
               )}
+            </div>
+
+            <div>
+              <Label>Wedding End Date (DD/MM/YYYY)</Label>
+              <TextInput value={wedding.end_date || ""} onChange={(v) => updateField("end_date", v)} placeholder="14/11/2026" />
+              <p className={`font-sans text-[10px] mt-1 ${wedding.end_date?.trim() && !endDate ? "text-red-500" : "text-muted-foreground"}`}>
+                {endDate
+                  ? `Guest links expire ${endDate.toLocaleString("en-GB", { dateStyle: "long", timeStyle: "short" })} (your local time), then open a keepsake invite that asks for a name. Publish to apply.`
+                  : wedding.end_date?.trim()
+                    ? "Enter a real date as DD/MM/YYYY, e.g. 14/11/2026."
+                    : "Optional. Leave empty and guest links never expire."}
+              </p>
             </div>
           </SectionCard>
 

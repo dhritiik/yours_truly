@@ -25,6 +25,12 @@ service cloud.firestore {
       return isAdmin() || isCustomerOwner(customerId);
     }
 
+    // Public invite docs carry expire_at (end of the wedding end date) when
+    // an end date was set at publish. No field = never expires.
+    function notExpired(data) {
+      return !('expire_at' in data) || data.expire_at > request.time;
+    }
+
     // ── users/{uid} ──────────────────────────────────────────────────────────
     // Each user can read and write only their own profile document.
     // Note: `role` is set by the app on first write and should only ever be
@@ -74,6 +80,54 @@ service cloud.firestore {
       }
     }
 
+    // ── wedding_archives/{slug} ──────────────────────────────────────────────
+    // Permanent, guest-less copy of a published invitation, served at /{slug}
+    // after the live weddings/{slug} docs expire or are deleted by the admin.
+    // Same access as weddings/.
+    match /wedding_archives/{slug} {
+      allow read: if true;
+      allow create: if isSignedIn()
+                    && (isAdmin() || request.resource.data.owner_uid == request.auth.uid);
+      allow update, delete: if isSignedIn()
+                            && (isAdmin() || resource.data.owner_uid == request.auth.uid);
+    }
+
+    // ── wedding_reports/{slug} ───────────────────────────────────────────────
+    // Consolidated numbers per wedding (see src/lib/reportService.ts).
+    // Admin-only, except the narrow RSVP counter move below. The public
+    // /report/{share_token} page reads it on the server with firebase-admin
+    // (src/lib/firebaseAdmin.ts), which bypasses these rules. Once frozen
+    // (final == true, set before the guest data is deleted) nothing can
+    // change it except a write that un-freezes it (a republish).
+    match /wedding_reports/{slug} {
+      function frozen() {
+        return resource.data.get('final', false) == true;
+      }
+
+      allow read, create, delete: if isAdmin();
+      // A frozen report may still be given a share link (share_token).
+      allow update: if isAdmin()
+                    && (!frozen()
+                        || request.resource.data.get('final', false) != true
+                        || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['share_token']));
+
+      // Guest RSVP from the invite page (unauthenticated): move ONE invite between pending /
+      // accepted / declined. The total must not change and no counter may
+      // move by more than 1 or go negative — no more power than the RSVP
+      // rule on guests/ already gives.
+      allow update: if !frozen()
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['accepted', 'declined', 'pending', 'updated_at'])
+                    && request.resource.data.accepted + request.resource.data.declined + request.resource.data.pending
+                         == resource.data.accepted + resource.data.declined + resource.data.pending
+                    && math.abs(request.resource.data.accepted - resource.data.accepted) <= 1
+                    && math.abs(request.resource.data.declined - resource.data.declined) <= 1
+                    && math.abs(request.resource.data.pending - resource.data.pending) <= 1
+                    && request.resource.data.accepted >= 0
+                    && request.resource.data.declined >= 0
+                    && request.resource.data.pending >= 0;
+    }
+
     // ── weddings/{slug} ──────────────────────────────────────────────────────
     // Published invitations. Anyone can READ the wedding document (it powers
     // the public invite page). Only the owner (customer_id, stored as
@@ -117,8 +171,10 @@ service cloud.firestore {
       // WRITE: wedding owner or admin only (unchanged).
       //
       match /guests/{guestId} {
-        // Single-document reads: open — used by magic link token resolution
-        allow get: if true;
+        // Single-document reads: open — used by magic link token resolution —
+        // until the wedding's end date. After that the doc is unreadable, even
+        // though it physically exists until the admin deletes it (Insights page).
+        allow get: if resource == null || notExpired(resource.data);
 
         // Collection queries: OWNER OR ADMIN ONLY — prevents guest list enumeration.
         // The RSVP legacy path (Path B) will fail for unauthenticated calls
@@ -130,9 +186,10 @@ service cloud.firestore {
                           == request.auth.uid);
 
         // Guest RSVP: anyone may update ONLY rsvp_status / rsvp_updated_at on
-        // an existing guest doc (used by /api/rsvp; token is checked there).
+        // an existing guest doc (written directly by RsvpSection on the invite page).
         allow update: if request.resource.data.diff(resource.data).affectedKeys()
                            .hasOnly(['rsvp_status', 'rsvp_updated_at'])
+                      && notExpired(resource.data)
                       && request.resource.data.rsvp_status in ['Accepted', 'Declined'];
 
         // Writes: owner or admin only.

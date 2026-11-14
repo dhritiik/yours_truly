@@ -75,9 +75,14 @@ export default function WeddingPage({ wedding, guestSlug }: WeddingPageProps) {
   const gid = searchParams.get("gid"); // guest_id embedded in legacy-format magic links
 
   const [guest, setGuest] = useState<Guest | null>(null);
-  const [loading, setLoading] = useState(!!token || !!guestSlug);
+  const [loading, setLoading] = useState(!wedding.expired && (!!token || !!guestSlug));
+  // Expired/deleted invite: no guest doc to personalise from, so ask for a name.
+  const [askName, setAskName] = useState(!!wedding.expired);
 
   useEffect(() => {
+    // Expired: no guest docs left to read (and rules deny them) — skip the reads.
+    if (wedding.expired) return;
+
     // ── Path C (current): recognizable path segment /{slug}/{guest_slug} ────
     // The guest doc is keyed by guest_slug, so this is a single direct
     // getDoc() — no token to validate since the slug itself isn't a secret.
@@ -143,9 +148,58 @@ export default function WeddingPage({ wedding, guestSlug }: WeddingPageProps) {
     };
 
     fetchGuest();
-  }, [token, gid, guestSlug, wedding.wedding_id, wedding.slug]);
+  }, [token, gid, guestSlug, wedding.wedding_id, wedding.slug, wedding.expired]);
 
   if (loading) return <FullPageSpinner />;
+
+  if (askName) {
+    return (
+      <form
+        className="fixed inset-0 bg-[#FDFBF7] flex flex-col items-center justify-center gap-4 p-6 text-center"
+        onSubmit={(e) => {
+          e.preventDefault();
+          const name = new FormData(e.currentTarget).get("name")?.toString().trim();
+          // Name only — no event_seats, so the template shows every event.
+          if (name) setGuest({ name } as Guest);
+          setAskName(false);
+        }}
+      >
+        <h1 className="font-display text-2xl text-stone-700">
+          {wedding.couple.bride} &amp; {wedding.couple.groom}
+        </h1>
+        <p className="font-sans text-sm text-stone-600 max-w-xs">
+          Oops, you&apos;re late for the wedding! 🎉 The shaadi is over, the food is gone,
+          and the DJ went home. But you can still peek at the invite.
+        </p>
+        <label htmlFor="guest-name" className="font-sans text-sm text-stone-500">
+          Enter your name to get an invite with your name on it
+        </label>
+        <input
+          id="guest-name"
+          name="name"
+          autoFocus
+          maxLength={60}
+          autoComplete="name"
+          placeholder="Your name"
+          className="w-full max-w-xs rounded-xl border border-[#E8E0D8] bg-white px-4 py-3 text-center font-sans text-base outline-none focus:border-[hsl(43,75%,50%)]"
+        />
+        <button
+          type="submit"
+          className="font-sans text-sm font-semibold px-6 py-3 rounded-xl text-white"
+          style={{ background: "hsl(43,75%,45%)" }}
+        >
+          Open Invitation
+        </button>
+        <button
+          type="button"
+          onClick={() => setAskName(false)}
+          className="font-sans text-sm text-stone-500 underline underline-offset-4"
+        >
+          View default template
+        </button>
+      </form>
+    );
+  }
 
   const commonProps = { wedding, guest };
 

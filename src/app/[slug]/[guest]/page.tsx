@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 import WeddingPage from "../WeddingPage";
 import { getWeddingData } from "@/lib/getWeddingData";
@@ -25,6 +25,10 @@ export default async function SlugGuestPage({ params }: PageProps) {
   if (!wedding) {
     notFound();
   }
+
+  // Past the wedding end date the guest docs are gone — send every personal
+  // link to the permanent page, which asks for a name instead.
+  if (wedding.expired) redirect(`/${slug}`);
 
   return (
     <Suspense
