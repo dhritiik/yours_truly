@@ -104,6 +104,9 @@ export function generateGuestSlug(name: string, existingSlugs: Set<string>): str
   return `${base}-${n}`;
 }
 
+/** Fresh secret for a guest's link — see Guest.link_key. */
+export const newLinkKey = () => crypto.randomUUID().slice(0, 8);
+
 // ── Privacy: public guest shape ───────────────────────────────────────────────
 
 /**
@@ -201,7 +204,7 @@ export async function importGuests(
     const id = crypto.randomUUID();
     const slug = generateGuestSlug(g.name, usedSlugs);
     usedSlugs.add(slug);
-    const full: Guest = { ...g, guest_id: id, guest_slug: slug, wedding_id: weddingId };
+    const full: Guest = { ...g, guest_id: id, guest_slug: slug, link_key: newLinkKey(), wedding_id: weddingId };
     ops.push((batch) => batch.set(guestDocPath(uid, id), full));
     saved.push(full);
   }
@@ -364,7 +367,11 @@ export async function publishGuestList(uid: string, slug: string, endDate?: stri
 /**
  * Build a personalised magic link for a guest.
  *
- * Format: /i/{slug}/{guest_slug}
+ * Format: /i/{slug}/{link_key}/{guest_slug}
+ *
+ * link_key is the guest's secret: the invite page refuses the link unless it
+ * matches, and caches the guest's data under it. It changes on every edit,
+ * so the old link stops working — re-send the link after editing a guest.
  *
  * The guest_slug is a recognizable, human-readable identifier (e.g.
  * "priya-aunty") rather than a secret token — the public guest document is
@@ -378,7 +385,7 @@ export async function publishGuestList(uid: string, slug: string, endDate?: stri
  */
 export function buildMagicLink(
   slug: string,
-  guest: Pick<Guest, "guest_token" | "guest_id" | "guest_slug">,
+  guest: Pick<Guest, "guest_token" | "guest_id" | "guest_slug" | "link_key">,
   baseUrl?: string
 ): string {
   // Guest-facing links must always point at the public domain
@@ -388,7 +395,8 @@ export function buildMagicLink(
   const base = baseUrl ?? "https://yourstrulyinvites.com/i";
 
   if (guest.guest_slug?.trim()) {
-    return `${base}/${slug}/${guest.guest_slug}`;
+    // No link_key yet (guest predates it): old two-part link, still accepted.
+    return `${base}/${slug}/${guest.link_key ? `${guest.link_key}/` : ""}${guest.guest_slug}`;
   }
   // Legacy fallback for guests without a guest_slug yet.
   return `${base}/${slug}?t=${guest.guest_token}&gid=${guest.guest_id}`;

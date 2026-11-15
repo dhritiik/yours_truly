@@ -6,9 +6,12 @@
  * Receives WeddingData from the ISR server component.
  * CSR-handles:
  *   1. Resolving the guest, in priority order:
- *      a. `guestSlug` prop — new personalized path /{slug}/{guest_slug}
- *         (set by src/app/[slug]/[guest]/page.tsx). Single direct getDoc()
- *         keyed by the human-readable slug, e.g. "priya-aunty".
+ *      a. `guestSlug` (+ `linkKey`) props — /{slug}/{secret}/{guest_slug}
+ *         (src/app/[slug]/[guest]/[name]/page.tsx). Single direct getDoc()
+ *         keyed by the guest slug, refused unless the secret matches the
+ *         doc's link_key; then cached in localStorage under that secret
+ *         (see src/lib/guestCache.ts). /{slug}/{guest_slug} without a secret
+ *         only opens for older guests that have no link_key yet.
  *      b. Legacy ?t=&gid= query string — direct getDoc() by guest_id, then
  *         token-validated.
  *      c. Legacy ?t= only (no gid) — getDocs() query by guest_token.
@@ -22,6 +25,7 @@ import { useSearchParams } from "next/navigation";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { WeddingData, Guest } from "@/lib/types";
+import { readCachedGuest, writeCachedGuest } from "@/lib/guestCache";
 import dynamic from "next/dynamic";
 
 // Dynamic per-template imports — each template's JS is only loaded when needed.
@@ -67,9 +71,15 @@ interface WeddingPageProps {
    * priority over the legacy ?t=&gid= query-string form below.
    */
   guestSlug?: string;
+  /**
+   * The guest's secret from /{slug}/{secret}/{guest_slug}. Must equal the
+   * guest doc's link_key or the invite is refused; also the localStorage
+   * cache key (see src/lib/guestCache.ts).
+   */
+  linkKey?: string;
 }
 
-export default function WeddingPage({ wedding, guestSlug }: WeddingPageProps) {
+export default function WeddingPage({ wedding, guestSlug, linkKey }: WeddingPageProps) {
   const searchParams = useSearchParams();
   const token = searchParams.get("t");
   const gid = searchParams.get("gid"); // guest_id embedded in legacy-format magic links
@@ -78,6 +88,8 @@ export default function WeddingPage({ wedding, guestSlug }: WeddingPageProps) {
   const [loading, setLoading] = useState(!wedding.expired && (!!token || !!guestSlug));
   // Expired/deleted invite: no guest doc to personalise from, so ask for a name.
   const [askName, setAskName] = useState(!!wedding.expired);
+  // Personal link that doesn't resolve to a guest (wrong name or secret).
+  const [invalid, setInvalid] = useState(false);
 
   useEffect(() => {
     // Expired: no guest docs left to read (and rules deny them) — skip the reads.
@@ -85,16 +97,33 @@ export default function WeddingPage({ wedding, guestSlug }: WeddingPageProps) {
 
     // ── Path C (current): recognizable path segment /{slug}/{guest_slug} ────
     // The guest doc is keyed by guest_slug, so this is a single direct
-    // getDoc() — no token to validate since the slug itself isn't a secret.
+    // getDoc(), then the link's secret is checked against the doc's link_key.
     if (guestSlug) {
+      // Repeat visit on the same link: reuse the cached doc, no Firestore read.
+      const cached = linkKey && readCachedGuest(wedding.slug, guestSlug, linkKey);
+      if (cached) {
+        setGuest(cached);
+        setLoading(false);
+        return;
+      }
       setLoading(true);
       const guestRef = doc(db, "weddings", wedding.slug, "guests", guestSlug);
       getDoc(guestRef)
         .then((snap) => {
-          if (snap.exists()) setGuest(snap.data() as Guest);
-          else console.warn("No guest found for slug:", guestSlug);
+          const g = snap.data() as Guest | undefined;
+          // The secret must match. Guests created before link_key existed have
+          // none, so their already-sent /{slug}/{guest_slug} links still open.
+          if (!g || (g.link_key || "") !== (linkKey || "")) {
+            setInvalid(true);
+            return;
+          }
+          setGuest(g);
+          if (linkKey) writeCachedGuest(wedding.slug, guestSlug, linkKey, g);
         })
-        .catch((err) => console.error("Guest fetch error:", err))
+        .catch((err) => {
+          console.error("Guest fetch error:", err);
+          setInvalid(true);
+        })
         .finally(() => setLoading(false));
       return;
     }
@@ -148,9 +177,20 @@ export default function WeddingPage({ wedding, guestSlug }: WeddingPageProps) {
     };
 
     fetchGuest();
-  }, [token, gid, guestSlug, wedding.wedding_id, wedding.slug, wedding.expired]);
+  }, [token, gid, linkKey, guestSlug, wedding.wedding_id, wedding.slug, wedding.expired]);
 
   if (loading) return <FullPageSpinner />;
+
+  if (invalid) {
+    return (
+      <div className="fixed inset-0 bg-[#FDFBF7] flex flex-col items-center justify-center gap-3 p-6 text-center">
+        <h1 className="font-display text-2xl text-stone-700">Invitation not found</h1>
+        <p className="font-sans text-sm text-stone-600 max-w-xs">
+          This link isn&apos;t valid. Please open the latest link you were sent, or ask the hosts for a new one.
+        </p>
+      </div>
+    );
+  }
 
   if (askName) {
     return (

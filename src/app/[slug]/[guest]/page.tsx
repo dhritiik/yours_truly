@@ -11,6 +11,9 @@ import { getWeddingData } from "@/lib/getWeddingData";
  * getWeddingData(slug) (shared unstable_cache entry, no extra Firestore
  * reads) and just forwards the `guest` path segment down as `guestSlug`,
  * which WeddingPage resolves via a direct getDoc() keyed by guest_slug.
+ *
+ * Legacy form: only opens for guests that have no link_key (secret) yet.
+ * Current links are /{slug}/{secret}/{guest_slug} — see ./[name]/page.tsx.
  */
 export const revalidate = 300;
 

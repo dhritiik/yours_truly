@@ -11,6 +11,7 @@ import { useState } from "react";
 import { doc, updateDoc, increment } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import type { WeddingData, Guest } from "@/lib/types";
+import { patchCachedGuest } from "@/lib/guestCache";
 
 // rsvp_status -> counter field on wedding_reports/{slug}
 const KEY = { Pending: "pending", Accepted: "accepted", Declined: "declined" } as const;
@@ -63,10 +64,13 @@ export default function RsvpSection({ wedding, guest, variant = "classic" }: {
       // Straight to Firestore (no API route). firestore.rules lets anyone change
       // only rsvp_status / rsvp_updated_at on an unexpired guest doc.
       const now = new Date().toISOString();
-      await updateDoc(doc(db, "weddings", wedding.slug, "guests", guest.guest_slug || guest.guest_id), {
+      const guestKey = guest.guest_slug || guest.guest_id;
+      await updateDoc(doc(db, "weddings", wedding.slug, "guests", guestKey), {
         rsvp_status: choice,
         rsvp_updated_at: now,
       });
+      // Else a reload would show the old answer and move the counters twice.
+      patchCachedGuest(wedding.slug, guestKey, { rsvp_status: choice, rsvp_updated_at: now });
       // Move this invite between the report's counters. Best-effort: the RSVP
       // is already saved; a missing/frozen report must not fail it, and any
       // drift is fixed by the dashboard's Refresh / Guest List self-heal.

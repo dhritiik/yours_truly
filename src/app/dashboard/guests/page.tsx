@@ -37,6 +37,7 @@ import {
   publishGuestList,
   syncSingleGuestToPublic,
   buildMagicLink,
+  newLinkKey,
   buildWhatsAppUrl,
   generateGuestSlug,
 } from "@/lib/guestService";
@@ -596,7 +597,8 @@ function GuestRow({
     setSaving(true);
     // invited_events is deprecated — it's always derivable from event_seats.
     // We no longer compute and store it to eliminate the redundant field.
-    const updated: Guest = { ...editing };
+    // New link_key = new link: the old one stops working and cached copies are dropped.
+    const updated: Guest = { ...editing, link_key: newLinkKey() };
 
     // Update private collection (source of truth)
     await updateGuest(uid, updated);
@@ -798,6 +800,7 @@ function AddGuestModal({
       phone_number: phone.trim() || undefined,
       guest_token: crypto.randomUUID(),
       guest_slug: generateGuestSlug(name.trim(), existingGuestSlugs),
+      link_key: newLinkKey(),
       event_seats: seats,
       // invited_events omitted — deprecated field, always derivable from event_seats
       rsvp_status: "Pending",

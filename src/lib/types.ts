@@ -56,6 +56,13 @@ export interface Guest {
    * field existed — those guests won't have a personalized path link.
    */
   guest_slug?: string;
+  /**
+   * Random secret in the invite link: /{slug}/{link_key}/{guest_slug}. The
+   * guest page refuses a link whose secret doesn't match, and caches the
+   * guest doc in localStorage under it (src/lib/guestCache.ts). Rotated on
+   * every dashboard edit, which invalidates the previously sent link.
+   */
+  link_key?: string;
   // Per-event seat map: key = event_id, value = seat count (0 means not invited)
   event_seats: Record<string, number>;
   /**
