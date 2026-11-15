@@ -349,12 +349,19 @@ export async function publishGuestList(uid: string, slug: string, endDate?: stri
       slugKey = generateGuestSlug(privateData.name, usedSlugs);
       usedSlugs.add(slugKey);
     }
+    // Guests from before link secrets get one now. Write it (and any new
+    // slug) back to the private doc too, or the dashboard keeps showing the
+    // old link — whose secret no longer matches once this one is set.
+    const linkKey = privateData.link_key || newLinkKey();
+    if (linkKey !== privateData.link_key || slugKey !== privateData.guest_slug) {
+      allOps.push((batch) => batch.update(d.ref, { link_key: linkKey, guest_slug: slugKey }));
+    }
     const preservedRsvp = publicRsvpMap.get(slugKey);
     const ref = publicGuestPath(slug, slugKey);
 
     const publicData: PublicGuest & { rsvp_updated_at?: string } = preservedRsvp
-      ? { ...toPublicGuest(privateData), guest_slug: slugKey, ...preservedRsvp }
-      : { ...toPublicGuest(privateData), guest_slug: slugKey };
+      ? { ...toPublicGuest(privateData), guest_slug: slugKey, link_key: linkKey, ...preservedRsvp }
+      : { ...toPublicGuest(privateData), guest_slug: slugKey, link_key: linkKey };
 
     allOps.push((batch) => batch.set(ref, { ...publicData, ...expiryStamp(endDate) }));
   });
