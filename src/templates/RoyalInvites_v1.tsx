@@ -42,7 +42,6 @@ const COMPASS_ICON = withBasePath("/wedding-new-compass.webp");
 const MUSIC_ICON = withBasePath("/wedding-new-music_icon.webp");
 const FARMAN_ROLLED = withBasePath("/wedding-new-farman-rolled-x-v01.webp");
 const FARMAN_OPEN = withBasePath("/wedding-new-farman-open-x-v01.webp");
-const LOTUS_DIVIDER = "https://pub-1cc0f6e993214be9a36badeeb631f4b6.r2.dev/templates/template09/assets/invite/pn-inv-div-lotus-divider-x-v01.webp";
 
 const PULL_THRESHOLD = 90;
 const MAX_PULL = 160;
@@ -123,23 +122,12 @@ const Envelope = ({ onOpen, audioRef }: { onOpen: () => void; audioRef?: React.R
 // ---------------------------------------------------------
 // EVENT TIMELINE — unrolling "farman" scrolls, alternating left/right
 // ---------------------------------------------------------
-const getMotifIcon = (title: string) => {
-  const t = title.toLowerCase();
-  if (t.includes("mehendi")) return "https://pub-1cc0f6e993214be9a36badeeb631f4b6.r2.dev/templates/template09/assets/event/pn-evt-ico-mehendi-x-v01.webp";
-  if (t.includes("haldi")) return "https://pub-1cc0f6e993214be9a36badeeb631f4b6.r2.dev/templates/template09/assets/event/pn-evt-ico-haldi-x-v01.webp";
-  if (t.includes("sangeet") || t.includes("bhakti")) return "https://pub-1cc0f6e993214be9a36badeeb631f4b6.r2.dev/templates/template09/assets/event/pn-evt-ico-sangeet-x-v01.webp";
-  if (t.includes("reception")) return "https://pub-1cc0f6e993214be9a36badeeb631f4b6.r2.dev/templates/template09/assets/event/pn-evt-ico-reception-x-v01.webp";
-  if (t.includes("vidaai")) return "https://pub-1cc0f6e993214be9a36badeeb631f4b6.r2.dev/templates/template09/assets/event/pn-evt-ico-vidaai-x-v01.webp";
-  return "https://pub-1cc0f6e993214be9a36badeeb631f4b6.r2.dev/templates/template09/assets/event/pn-evt-ico-shaadi-x-v01.webp";
-};
-
 const FarmanStop = ({ event, seatCountText }: {
   event: WeddingData["events"][0];
   seatCountText: string | null;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [animationComplete, setAnimationComplete] = useState(false);
-  const motif = getMotifIcon(event.event_name);
 
   return (
     <motion.article
@@ -163,7 +151,6 @@ const FarmanStop = ({ event, seatCountText }: {
           <div className="farman-dust-dot dot-4"></div>
         </div>
         <motion.div className="farman-content" initial={{ opacity: 0 }} animate={isOpen ? { opacity: 1 } : { opacity: 0 }} transition={{ delay: 0.6, duration: 0.5 }} aria-label={`${event.event_name} details`}>
-          <img className="farman-motif" src={motif} alt="motif" />
           <h3 className="farman-name">{event.event_name}</h3>
           <div className="farman-rule" aria-hidden="true"></div>
           <p className="farman-datetime">{event.date_display} · {event.time_display}</p>
@@ -246,7 +233,6 @@ const EventTimeline = ({ events, guest }: {
            without the old fixed 40px side padding causing overflow. */
         .farman-content { position: relative; z-index: 10; padding: clamp(36px, 11vw, 68px) clamp(28px, 10vw, 56px); display: flex; flex-direction: column; align-items: center; text-align: center; width: 84%; margin: 0 auto; box-sizing: border-box; }
         .farman-content > * { max-width: 100%; overflow-wrap: break-word; hyphens: auto; }
-        .farman-motif { width: clamp(40px, 12vw, 75px); height: auto; margin-bottom: 14px; }
         .farman-name { font-family: 'Cinzel', serif; font-size: clamp(1rem, 4.2vw, 1.8rem); font-weight: 700; color: #863745; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px; }
         .farman-rule { width: 80px; height: 1px; background-color: #d8c29d; margin-bottom: 10px; }
         .farman-datetime { font-family: 'Cormorant Garamond', serif; font-size: clamp(0.85rem, 3.2vw, 1.4rem); font-weight: 700; color: #3b4435; margin-bottom: 6px; }
@@ -262,7 +248,6 @@ const EventTimeline = ({ events, guest }: {
         .dot-3 { width: 2.5px; height: 2.5px; left: 60%; top: 40%; animation-duration: 6s; animation-delay: 0.5s; }
         .dot-4 { width: 3.5px; height: 3.5px; right: 40%; bottom: 35%; animation-duration: 8s; animation-delay: 3s; }
         @keyframes floatDust { 0%, 100% { transform: translateY(0) translateX(0) scale(1); opacity: 0; } 50% { transform: translateY(-20px) translateX(10px) scale(1.2); opacity: 0.8; } }
-        @media (min-width: 768px) { .farman-inter--lotus img { width: 160px; max-width: 200px; } }
         /* The dust motes are decorative and animate forever on every card in
            the list, which keeps the compositor busy on low-end phones. Drop
            them entirely when the OS asks for reduced motion. */
@@ -278,11 +263,6 @@ const EventTimeline = ({ events, guest }: {
               <React.Fragment key={event.event_id}>
                 <FarmanStop event={event} seatCountText={seatCountText} />
                 {index < visibleEvents.length - 1 && (
-                  index === 2 ? (
-                    <div className="farman-inter farman-inter--lotus" aria-hidden="true">
-                      <img src={LOTUS_DIVIDER} alt="" decoding="async" loading="lazy" />
-                    </div>
-                  ) : (
                     <div className="farman-inter" aria-hidden="true">
                       <svg width="88" height="18" viewBox="0 0 88 18" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <defs>
@@ -302,7 +282,6 @@ const EventTimeline = ({ events, guest }: {
                         <line x1="56" y1="9" x2="88" y2="9" stroke={`url(#fgr-${event.event_id})`} strokeWidth="1"></line>
                       </svg>
                     </div>
-                  )
                 )}
               </React.Fragment>
             );
